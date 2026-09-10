@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NZ Documents Assistant</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<meta name="theme-color" content="#16233F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NZ Docs Assist">
+<meta name="description" content="Apostille and authentication estimate builder, courier network and resource library for NZ Document Assist.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#16233F;
+    --ink-soft:#48546C;
+    --ink-faint:#7A8496;
+    --paper:#EEF2ED;
+    --paper-dim:#E4E9E1;
+    --surface:#FFFFFF;
+    --seal:#A6392B;
+    --seal-soft:#F4E4DE;
+    --gold:#8F7328;
+    --gold-soft:#F1E9D3;
+    --good:#2E6E4E;
+    --good-soft:#DEEBE1;
+    --line:#D3D9CC;
+    --line-soft:#E3E7DD;
+    --shadow: 0 1px 2px rgba(22,35,63,.06), 0 8px 24px -12px rgba(22,35,63,.18);
+    --radius: 3px;
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono:'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#ECEEF3;
+      --ink-soft:#B7BECD;
+      --ink-faint:#828B9E;
+      --paper:#141A28;
+      --paper-dim:#0F141F;
+      --surface:#1B2333;
+      --seal:#E2836F;
+      --seal-soft:#3A211D;
+      --gold:#D6BA6E;
+      --gold-soft:#332A17;
+      --good:#7FC89E;
+      --good-soft:#1B3226;
+      --line:#323C52;
+      --line-soft:#242D40;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#ECEEF3;
+    --ink-soft:#B7BECD;
+    --ink-faint:#828B9E;
+    --paper:#141A28;
+    --paper-dim:#0F141F;
+    --surface:#1B2333;
+    --seal:#E2836F;
+    --seal-soft:#3A211D;
+    --gold:#D6BA6E;
+    --gold-soft:#332A17;
+    --good:#7FC89E;
+    --good-soft:#1B3226;
+    --line:#323C52;
+    --line-soft:#242D40;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px -14px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:var(--font-display);
+    font-weight:600;
+    color:var(--ink);
+    text-wrap:balance;
+    margin:0;
+  }
+  p{ margin:0; line-height:1.6; color:var(--ink-soft); }
+  .mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  .eyebrow{
+    font-family:var(--font-body);
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+  }
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+  :focus-visible{ outline:2px solid var(--seal); outline-offset:2px; }
+
+  /* ---------- shell ---------- */
+  .shell{ max-width:1180px; margin:0 auto; padding:0 28px; }
+
+  header.topbar{
+    position:sticky; top:0; z-index:40;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:24px; padding:16px 28px;
+    max-width:1180px; margin:0 auto;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand svg{ width:36px; height:36px; flex:none; }
+  .brand-text{ display:flex; flex-direction:column; line-height:1.15; }
+  .brand-text .name{ font-family:var(--font-display); font-weight:600; font-size:1.08rem; }
+  .brand-text .tag{ font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
+
+  nav.tabs{ display:flex; gap:4px; flex-wrap:wrap; }
+  nav.tabs button{
+    background:none; border:1px solid transparent; cursor:pointer;
+    padding:9px 14px; font-size:.86rem; font-weight:600; color:var(--ink-soft);
+    border-radius:var(--radius);
+  }
+  nav.tabs button:hover{ color:var(--ink); background:var(--paper-dim); }
+  nav.tabs button[aria-selected="true"]{
+    color:var(--ink); background:var(--surface); border-color:var(--line);
+    box-shadow:var(--shadow);
+  }
+
+  main{ padding:44px 0 88px; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:.72rem; font-weight:700; letter-spacing:.03em;
+    padding:4px 10px; border-radius:100px; white-space:nowrap;
+  }
+  .badge.good{ background:var(--good-soft); color:var(--good); }
+  .badge.seal{ background:var(--seal-soft); color:var(--seal); }
+  .badge.gold{ background:var(--gold-soft); color:var(--gold); }
+  .badge.neutral{ background:var(--line-soft); color:var(--ink-soft); }
+
+  /* ---------- home ---------- */
+  .hero{
+    display:grid; grid-template-columns:1.3fr 1fr; gap:56px; align-items:center;
+    padding-bottom:52px; border-bottom:1px solid var(--line);
+  }
+  .hero h1{ font-size:2.55rem; line-height:1.08; margin-bottom:18px; }
+  .hero .lede{ font-size:1.08rem; max-width:52ch; margin-bottom:26px; }
+  .hero-ctas{ display:flex; gap:12px; flex-wrap:wrap; }
+  .btn{
+    font-weight:700; font-size:.9rem; padding:12px 20px; border-radius:var(--radius);
+    border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary{ background:var(--ink); color:var(--paper); }
+  .btn-primary:hover{ opacity:.92; }
+  .btn-ghost{ background:transparent; border-color:var(--line); color:var(--ink); }
+  .btn-ghost:hover{ border-color:var(--ink-faint); }
+
+  .hero-stamp{ display:flex; justify-content:center; }
+  .hero-stamp svg{ width:220px; height:220px; }
+
+  .value-grid{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:0;
+    padding:36px 0; border-bottom:1px solid var(--line);
+  }
+  .value-grid li{ list-style:none; padding:0 20px; border-left:1px solid var(--line); font-size:.88rem; color:var(--ink-soft); }
+  .value-grid li:first-child{ border-left:none; padding-left:0; }
+  .value-grid li b{ display:block; color:var(--ink); font-weight:700; margin-bottom:6px; font-size:.82rem; }
+
+  .steps{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .steps h2{ font-size:1.7rem; margin-bottom:8px; }
+  .steps .eyebrow{ margin-bottom:10px; display:block; }
+  .step-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:22px; margin-top:32px; }
+  .step-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--shadow);
+  }
+  .step-num{ font-family:var(--font-mono); color:var(--gold); font-size:.8rem; font-weight:600; }
+  .step-card h4{ font-size:1.02rem; }
+  .step-card p{ font-size:.87rem; }
+
+  .disclaimer{
+    margin-top:44px; padding:18px 22px; background:var(--surface);
+    border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:var(--radius);
+    font-size:.82rem; color:var(--ink-soft);
+  }
+
+  .features{ padding:56px 0; }
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:30px; }
+  .feature-card{ padding:20px 0 0; border-top:2px solid var(--ink); }
+  .feature-card h4{ font-size:1.05rem; margin-bottom:8px; }
+  .feature-card p{ font-size:.87rem; }
+
+  /* ---------- section heads ---------- */
+  .section-head{ margin-bottom:30px; max-width:64ch; }
+  .section-head h2{ font-size:1.9rem; margin-bottom:10px; }
+
+  /* ---------- estimate builder ---------- */
+  .builder{ display:grid; grid-template-columns:1.05fr .95fr; gap:32px; align-items:start; }
+  .panel{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:26px; box-shadow:var(--shadow);
+  }
+  .panel + .panel{ margin-top:20px; }
+  .panel h3{ font-size:1.05rem; margin-bottom:4px; }
+  .panel .hint{ font-size:.8rem; color:var(--ink-faint); margin-bottom:18px; display:block; }
+
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:.76rem; font-weight:700; color:var(--ink-soft); letter-spacing:.02em; }
+  select, input[type=text], input[type=number]{
+    font-family:var(--font-body); font-size:.9rem; padding:9px 11px;
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--paper);
+    color:var(--ink); width:100%;
+  }
+  select:focus, input:focus{ border-color:var(--ink-faint); }
+
+  .toggle-row{ display:flex; gap:18px; flex-wrap:wrap; margin-bottom:16px; }
+  .toggle{ display:flex; align-items:center; gap:8px; font-size:.85rem; color:var(--ink-soft); cursor:pointer; }
+  .toggle input{ accent-color:var(--ink); width:16px; height:16px; }
+
+  .doc-lines{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .doc-line{
+    display:grid; grid-template-columns:1.3fr .5fr .62fr .62fr auto; gap:10px; align-items:center;
+    padding:10px; background:var(--paper); border:1px solid var(--line-soft); border-radius:var(--radius);
+  }
+  .doc-line label.toggle{ font-size:.76rem; }
+  .icon-btn{
+    background:none; border:1px solid var(--line); border-radius:var(--radius); cursor:pointer;
+    width:30px; height:30px; display:flex; align-items:center; justify-content:center; color:var(--ink-faint);
+  }
+  .icon-btn:hover{ color:var(--seal); border-color:var(--seal); }
+  .add-line{
+    align-self:flex-start; background:none; border:1px dashed var(--line); color:var(--ink-soft);
+    padding:9px 14px; border-radius:var(--radius); cursor:pointer; font-size:.85rem; font-weight:600;
+  }
+  .add-line:hover{ border-color:var(--ink-faint); color:var(--ink); }
+
+  details.ratecard{ margin-top:4px; }
+  details.ratecard summary{ cursor:pointer; font-size:.82rem; font-weight:700; color:var(--ink-soft); padding:6px 0; }
+  .rate-grid{ display:grid; grid-template-columns:1fr 110px; gap:10px 14px; align-items:center; margin-top:12px; }
+  .rate-grid label{ font-size:.82rem; color:var(--ink-soft); }
+  .rate-grid input{ text-align:right; font-family:var(--font-mono); }
+
+  /* ---------- certificate ---------- */
+  .certificate{
+    position:sticky; top:96px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:2px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .certificate-frame{ border:1px solid var(--line-soft); margin:10px; padding:26px; position:relative; }
+  .cert-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px; }
+  .cert-head .eyebrow{ display:block; margin-bottom:6px; }
+  .cert-head h3{ font-size:1.3rem; }
+  .cert-ref{ font-family:var(--font-mono); font-size:.74rem; color:var(--ink-faint); text-align:right; }
+  .cert-pathway{ margin:14px 0 20px; padding:12px 14px; background:var(--paper); border-radius:var(--radius); font-size:.83rem; color:var(--ink-soft); }
+  .cert-pathway b{ color:var(--ink); }
+
+  table.cert-table{ width:100%; border-collapse:collapse; font-size:.84rem; margin-bottom:6px; }
+  table.cert-table th{ text-align:left; font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); padding-bottom:8px; border-bottom:1px solid var(--line); font-weight:700; }
+  table.cert-table td{ padding:9px 0; border-bottom:1px solid var(--line-soft); color:var(--ink-soft); vertical-align:top; }
+  table.cert-table td:last-child, table.cert-table th:last-child{ text-align:right; font-family:var(--font-mono); color:var(--ink); }
+  .cert-line-name{ color:var(--ink); font-weight:600; }
+  .cert-line-sub{ font-size:.76rem; color:var(--ink-faint); }
+
+  .cert-total{ display:flex; justify-content:space-between; align-items:baseline; padding-top:16px; margin-top:6px; border-top:2px solid var(--ink); }
+  .cert-total .label{ font-family:var(--font-display); font-size:1rem; font-weight:600; }
+  .cert-total .amount{ font-family:var(--font-mono); font-size:1.7rem; font-weight:600; }
+
+  .cert-seal{
+    position:absolute; right:22px; bottom:22px; width:86px; height:86px; opacity:.9;
+  }
+  .cert-actions{ display:flex; gap:10px; padding:16px 20px 20px; border-top:1px solid var(--line); }
+  .cert-fine{ font-size:.74rem; color:var(--ink-faint); padding:0 20px 18px; line-height:1.55; }
+
+  /* ---------- directory ---------- */
+  .filter-bar{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:26px; }
+  .chip{
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft);
+    padding:8px 14px; border-radius:100px; font-size:.82rem; font-weight:600; cursor:pointer;
+  }
+  .chip[aria-pressed="true"]{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .demo-banner{
+    display:flex; align-items:center; gap:10px; font-size:.78rem; color:var(--ink-faint);
+    padding:10px 14px; background:var(--paper-dim); border:1px dashed var(--line); border-radius:var(--radius);
+    margin-bottom:24px;
+  }
+  .courier-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .courier-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); }
+  .courier-card h4{ font-size:1rem; margin-bottom:4px; }
+  .courier-card .region{ font-size:.78rem; color:var(--gold); font-weight:700; margin-bottom:12px; display:block; }
+  .courier-card p{ font-size:.85rem; margin-bottom:10px; }
+  .courier-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+
+  /* ---------- resources ---------- */
+  .resource-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+  .resource-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:22px; }
+  .resource-card h4{ font-size:1.02rem; margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+  .resource-card p{ font-size:.87rem; }
+  .resource-card .tag-row{ margin-top:12px; }
+
+  .country-table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table.country-table{ width:100%; border-collapse:collapse; font-size:.85rem; min-width:560px; }
+  table.country-table th{ text-align:left; padding:12px 16px; background:var(--paper-dim); font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); border-bottom:1px solid var(--line); }
+  table.country-table td{ padding:11px 16px; border-bottom:1px solid var(--line-soft); color:var(--ink-soft); }
+  table.country-table tr:last-child td{ border-bottom:none; }
+
+  /* ---------- access ---------- */
+  .access-toggle{ display:inline-flex; border:1px solid var(--line); border-radius:100px; padding:3px; margin-bottom:30px; background:var(--surface); }
+  .access-toggle button{ border:none; background:none; padding:9px 20px; border-radius:100px; font-size:.85rem; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .access-toggle button[aria-pressed="true"]{ background:var(--ink); color:var(--paper); }
+  .access-panels{ display:grid; grid-template-columns:1fr; }
+  .access-panel{ display:none; }
+  .access-panel.active{ display:grid; grid-template-columns:.9fr 1.1fr; gap:30px; }
+  .login-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:26px; box-shadow:var(--shadow); height:fit-content; }
+  .login-card h3{ font-size:1.1rem; margin-bottom:6px; }
+  .login-card .hint{ display:block; font-size:.8rem; color:var(--ink-faint); margin-bottom:20px; }
+  .login-card .field{ margin-bottom:14px; }
+  .dash-preview{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:26px; box-shadow:var(--shadow); }
+  .dash-preview h3{ font-size:1.05rem; margin-bottom:16px; }
+  .dash-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line-soft); font-size:.87rem; }
+  .dash-row:last-child{ border-bottom:none; }
+  .dash-row .lbl{ color:var(--ink); font-weight:600; }
+  .dash-row .val{ color:var(--ink-faint); font-size:.82rem; }
+
+  footer{ border-top:1px solid var(--line); padding:26px 0; }
+  footer p{ font-size:.78rem; color:var(--ink-faint); }
+
+  @media (max-width: 980px){
+    .hero{ grid-template-columns:1fr; }
+    .hero-stamp{ order:-1; }
+    .value-grid{ grid-template-columns:repeat(2,1fr); row-gap:20px; }
+    .value-grid li{ border-left:none; padding-left:0; }
+    .step-grid, .feature-grid{ grid-template-columns:1fr 1fr; }
+    .builder{ grid-template-columns:1fr; }
+    .certificate{ position:static; }
+    .courier-grid, .resource-grid{ grid-template-columns:1fr; }
+    .access-panel.active{ grid-template-columns:1fr; }
+    .doc-line{ grid-template-columns:1fr 1fr; }
+    .doc-line select{ grid-column:1 / -1; }
+  }
+  @media print{
+    header.topbar, .steps, .value-grid, .disclaimer, .features, nav, .builder-form-col, .cert-actions{ display:none !important; }
+    body{ background:#fff; }
+    .certificate{ box-shadow:none; border:none; position:static; }
+  }
+</style>
+
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="24" cy="24" r="22" stroke="var(--gold)" stroke-width="1.4"/>
+        <circle cx="24" cy="24" r="17" stroke="var(--ink)" stroke-width="1.2"/>
+        <path d="M16 27L21 32L33 18" stroke="var(--seal)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="brand-text">
+        <span class="name">NZ Documents Assistant</span>
+        <span class="tag">Apostille &amp; Authentication Workflow</span>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-view="home">Home</button>
+      <button role="tab" aria-selected="false" data-view="estimate">Estimate Builder</button>
+      <button role="tab" aria-selected="false" data-view="couriers">Courier Network</button>
+      <button role="tab" aria-selected="false" data-view="resources">Resource Library</button>
+      <button role="tab" aria-selected="false" data-view="access">Facilitator &amp; Courier Access</button>
+    </nav>
+  </div>
+</header>
+
+<main class="shell">
+
+  <!-- ================= HOME ================= -->
+  <section class="view active" id="view-home">
+    <div class="hero">
+      <div>
+        <span class="eyebrow">Built for NZ document facilitators &amp; couriers</span>
+        <h1>Run the DIA apostille pathway without re-deriving it every time.</h1>
+        <p class="lede">Enter a request once and get the authentication pathway, an itemised client estimate built from your own rates, and the courier and reference support to carry it through — all in one working tool.</p>
+        <div class="hero-ctas">
+          <button class="btn btn-primary" data-goto="estimate">Build an estimate →</button>
+          <button class="btn btn-ghost" data-goto="resources">Browse the resource library</button>
+        </div>
+      </div>
+      <div class="hero-stamp">
+        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="100" cy="100" r="94" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="2 4"/>
+          <circle cx="100" cy="100" r="78" stroke="var(--ink)" stroke-width="1.4"/>
+          <circle cx="100" cy="100" r="70" stroke="var(--ink)" stroke-width="1"/>
+          <path id="stampArc1" d="M 100 30 A 70 70 0 0 1 170 100" fill="none"/>
+          <text font-family="Public Sans" font-size="9" letter-spacing="2" fill="var(--ink-soft)">
+            <textPath href="#stampArc1" startOffset="2">APOSTILLE · CONVENTION DE LA HAYE ·</textPath>
+          </text>
+          <path d="M70 104L92 126L134 78" stroke="var(--seal)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <ul class="value-grid">
+      <li><b>One pathway check</b>Hague apostille or embassy legalisation, surfaced from the destination country.</li>
+      <li><b>Fees split clearly</b>Our own coordination fees stay separate from estimated government, notary, translator and courier costs.</li>
+      <li><b>Cleaner estimates</b>An itemised, client-ready summary instead of a back-of-envelope figure.</li>
+      <li><b>Courier reach</b>Regional and embassy-city courier contacts without leaving the workflow.</li>
+      <li><b>Reference on hand</b>Short, practical notes on notarisation and legalisation, not a legal opinion.</li>
+    </ul>
+
+    <div class="steps">
+      <span class="eyebrow">How it works</span>
+      <h2>Four steps, in the order the work actually happens</h2>
+      <div class="step-grid">
+        <div class="step-card">
+          <span class="step-num">01</span>
+          <h4>Enter the request</h4>
+          <p>Destination country, document types and counts, notarisation and turnaround needs.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">02</span>
+          <h4>See the pathway</h4>
+          <p>Hague Apostille Convention member, or authentication plus embassy legalisation — with the steps that implies.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">03</span>
+          <h4>Review the estimate</h4>
+          <p>An itemised breakdown built from your own rate card, ready to send or print for a client file.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">04</span>
+          <h4>Work the network</h4>
+          <p>Pull in a courier for pickup, delivery or embassy drop-off, and check the reference notes as needed.</p>
+        </div>
+      </div>
+      <div class="disclaimer">
+        <strong>Not legal advice.</strong> NZ Documents Assistant is a planning and estimating tool for experienced facilitators. Default rates and Convention status are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table as of 10 Sep 2026, but none of it replaces DIA, embassy or consular guidance, professional judgement, or your own obligations under NZ law. Convention status, fees and processing times change — confirm current requirements before relying on any figure shown here.
+      </div>
+    </div>
+
+    <div class="features">
+      <span class="eyebrow">Feature set</span>
+      <h2 style="font-size:1.6rem; margin-bottom:8px;">Designed around the NZ authentication pathway, not a generic form</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>Estimate builder</h4>
+          <p>Add document lines, mark what needs notarising first, set standard or priority processing, and get a live, itemised total.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Coordination fees, kept separate</h4>
+          <p>Our own coordination fees are set from our published pricing, while government, notary, translator and courier costs stay in their own pass-through section.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Courier network</h4>
+          <p>Filter courier contacts by NZ region or by embassy-city coverage for the drop-offs a legalisation chain needs.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Resource library</h4>
+          <p>Short reference notes on notarisation, legalisation and processing options, written for facilitators, not lawyers.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Facilitator &amp; courier access</h4>
+          <p>Separate views for the two people who touch a request — the facilitator quoting it and the courier moving it.</p>
+        </div>
+        <div class="feature-card">
+          <h4>Print-ready output</h4>
+          <p>Turn a finished estimate into a clean printed or PDF page for a client file in one click.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ESTIMATE BUILDER ================= -->
+  <section class="view" id="view-estimate">
+    <div class="section-head">
+      <span class="eyebrow">Estimate builder</span>
+      <h2>Price a request with our own numbers</h2>
+      <p>Fees below are pre-loaded from our published pricing. Government, notary, translator and courier costs are estimates you can adjust.</p>
+    </div>
+
+    <div class="builder">
+      <div class="builder-form-col">
+        <div class="panel">
+          <h3>Request details</h3>
+          <span class="hint">Destination and processing choices decide the pathway shown on the right.</span>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="destCountry">Destination country</label>
+              <select id="destCountry"></select>
+            </div>
+            <div class="field">
+              <label for="courierRegion">Courier coverage needed</label>
+              <select id="courierRegion">
+                <option value="none">No courier — client handles delivery</option>
+                <option value="metro">Metro NZ (Auckland / Wellington / Christchurch)</option>
+                <option value="regional">Other NZ region</option>
+                <option value="embassy">Wellington embassy drop-off</option>
+                <option value="international">International</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row" id="categoryRow" style="display:none;">
+            <div class="field">
+              <label for="authCategory">Authentication category (non-Hague)</label>
+              <select id="authCategory">
+                <option value="A">Category A — DIA + MFAT + embassy verification</option>
+                <option value="B">Category B — full embassy legalisation</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <span class="hint" id="categoryHint" style="margin:0; padding-top:9px;"></span>
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="urgentToggle"> Government urgent service (5 working days, Apostille / Category A only)</label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Our service package</h3>
+          <span class="hint">Full-Service and International Multi-Step are flat starting fees that replace itemised coordination fees below — government, notary, translator and courier costs are still added separately either way.</span>
+          <div class="field-row">
+            <div class="field">
+              <label for="servicePackage">Package</label>
+              <select id="servicePackage">
+                <option value="individual">Itemised coordination (per step)</option>
+                <option value="fullservice">Full-Service Document Handling — from $149</option>
+                <option value="international">International Multi-Step Case — from $199</option>
+              </select>
+            </div>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="priorityAdminToggle"> Priority admin handling (+$50 — speeds up our admin only, not government/third-party processing)</label>
+            <label class="toggle"><input type="checkbox" id="aucklandApptToggle"> Auckland in-person appointment (+$49)</label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Documents</h3>
+          <span class="hint">Add one line per document type. Tick notarise for documents needing a New Zealand Notary Public first — a JP or solicitor's certification isn't accepted. Tick translate if the document needs a translation.</span>
+          <div class="doc-lines" id="docLines"></div>
+          <button class="add-line" id="addDocLine" type="button">+ Add document line</button>
+        </div>
+
+        <div class="panel">
+          <h3>Our coordination fees</h3>
+          <span class="hint">Our own service fees — defaults match the published NZ Document Assist pricing. Edit if your pricing changes.</span>
+          <details class="ratecard" open>
+            <summary>Edit our fees (NZD)</summary>
+            <div class="rate-grid" id="rateGridOurs"></div>
+          </details>
+        </div>
+
+        <div class="panel">
+          <h3>Estimated third-party &amp; government costs</h3>
+          <span class="hint">Passed through at cost — DIA, Notary Public, translator and courier charges are not ours to set. Example figures only; confirm before quoting.</span>
+          <details class="ratecard">
+            <summary>Edit third-party estimates (NZD)</summary>
+            <div class="rate-grid" id="rateGridThirdParty"></div>
+          </details>
+        </div>
+      </div>
+
+      <div class="certificate" id="certificate">
+        <div class="certificate-frame">
+          <div class="cert-head">
+            <div>
+              <span class="eyebrow">Estimate summary</span>
+              <h3>Client Estimate</h3>
+            </div>
+            <div class="cert-ref">
+              REF <span id="certRef"></span><br>
+              <span id="certDate"></span>
+            </div>
+          </div>
+
+          <div class="cert-pathway" id="certPathway"></div>
+
+          <table class="cert-table">
+            <thead>
+              <tr><th>Line item</th><th>Amount</th></tr>
+            </thead>
+            <tbody id="certLines"></tbody>
+          </table>
+
+          <div class="cert-total">
+            <span class="label">Estimated total</span>
+            <span class="amount mono" id="certTotal">$0.00</span>
+          </div>
+
+          <svg class="cert-seal" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="46" stroke="var(--gold)" stroke-width="1.2" fill="none" stroke-dasharray="1.5 3.5"/>
+            <circle cx="50" cy="50" r="36" stroke="var(--seal)" stroke-width="1.2" fill="none"/>
+            <text x="50" y="47" text-anchor="middle" font-family="Public Sans" font-size="7" fill="var(--seal)" letter-spacing="1">ESTIMATE</text>
+            <text x="50" y="58" text-anchor="middle" font-family="Public Sans" font-size="7" fill="var(--seal)" letter-spacing="1">ONLY</text>
+          </svg>
+        </div>
+        <div class="cert-actions">
+          <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
+          <button class="btn btn-ghost" id="resetEstimate" type="button">Reset</button>
+        </div>
+        <p class="cert-fine">Planning estimate only. "Our coordination fees" are our own charges; "third-party & government costs" are estimates only, set by DIA, the relevant embassy, the Notary Public, translator or courier — not by us, and not guaranteed. Confirm current figures before issuing this to a client.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COURIERS ================= -->
+  <section class="view" id="view-couriers">
+    <div class="section-head">
+      <span class="eyebrow">Courier network</span>
+      <h2>Regional and embassy-city courier support</h2>
+      <p>A growing network of couriers who handle DIA drop-off, embassy legalisation runs, and client document pickup across New Zealand.</p>
+    </div>
+
+    <div class="demo-banner">Sample directory for this prototype — not live courier listings.</div>
+
+    <div class="filter-bar" id="courierFilters"></div>
+    <div class="courier-grid" id="courierGrid"></div>
+  </section>
+
+  <!-- ================= RESOURCES ================= -->
+  <section class="view" id="view-resources">
+    <div class="section-head">
+      <span class="eyebrow">Resource library</span>
+      <h2>Practical notes for the authentication pathway</h2>
+      <p>Short, working references — not legal advice. Confirm current requirements with DIA and the relevant embassy before relying on any of this.</p>
+    </div>
+
+    <div class="resource-grid" id="resourceGrid"></div>
+
+    <div class="section-head" style="margin-top:48px;">
+      <h2 style="font-size:1.4rem;">Destination convention status (reference only)</h2>
+      <p>A working sample — Hague accessions change over time, so verify status before quoting a pathway to a client.</p>
+    </div>
+    <div class="country-table-wrap">
+      <table class="country-table">
+        <thead><tr><th>Country</th><th>Status</th><th>Pathway</th></tr></thead>
+        <tbody id="countryTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= ACCESS ================= -->
+  <section class="view" id="view-access">
+    <div class="section-head">
+      <span class="eyebrow">Account access</span>
+      <h2>Separate views for facilitators and couriers</h2>
+      <p>This prototype shows what each dashboard would surface — no account system is connected yet.</p>
+    </div>
+
+    <div class="access-toggle">
+      <button aria-pressed="true" data-access="facilitator">Facilitator</button>
+      <button aria-pressed="false" data-access="courier">Courier</button>
+    </div>
+
+    <div class="access-panels">
+      <div class="access-panel active" id="access-facilitator">
+        <div class="login-card">
+          <h3>Facilitator sign in</h3>
+          <span class="hint">Preview only — this form does not submit anywhere.</span>
+          <div class="field"><label>Email</label><input type="text" placeholder="you@yourpractice.co.nz"></div>
+          <div class="field"><label>Password</label><input type="text" placeholder="••••••••"></div>
+          <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:6px;" type="button" onclick="alert('Prototype only — account system not yet connected.')">Sign in</button>
+        </div>
+        <div class="dash-preview">
+          <h3>Facilitator dashboard preview</h3>
+          <div class="dash-row"><span class="lbl">Open estimates</span><span class="val">4 drafted this week</span></div>
+          <div class="dash-row"><span class="lbl">Saved rate card</span><span class="val">Last edited 3 days ago</span></div>
+          <div class="dash-row"><span class="lbl">Courier requests</span><span class="val">1 pending — Wellington embassy run</span></div>
+          <div class="dash-row"><span class="lbl">Client files</span><span class="val">12 active</span></div>
+          <div class="dash-row"><span class="lbl">Resource library</span><span class="val">Full access</span></div>
+        </div>
+      </div>
+
+      <div class="access-panel" id="access-courier">
+        <div class="login-card">
+          <h3>Courier partner sign in</h3>
+          <span class="hint">Preview only — this form does not submit anywhere.</span>
+          <div class="field"><label>Email</label><input type="text" placeholder="you@yourcourier.co.nz"></div>
+          <div class="field"><label>Password</label><input type="text" placeholder="••••••••"></div>
+          <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:6px;" type="button" onclick="alert('Prototype only — account system not yet connected.')">Sign in</button>
+        </div>
+        <div class="dash-preview">
+          <h3>Courier dashboard preview</h3>
+          <div class="dash-row"><span class="lbl">Active jobs</span><span class="val">2 — Auckland CBD, Wellington embassy</span></div>
+          <div class="dash-row"><span class="lbl">Coverage area</span><span class="val">Auckland metro + Wellington embassy runs</span></div>
+          <div class="dash-row"><span class="lbl">Facilitator visibility</span><span class="val">Listed in courier network</span></div>
+          <div class="dash-row"><span class="lbl">Completed this month</span><span class="val">17 deliveries</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>NZ Documents Assistant is a prototype planning tool for apostille and authentication facilitators and couriers. It is not affiliated with the New Zealand Department of Internal Affairs and does not provide legal advice.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- tab navigation ---------------- */
+  var tabs = document.querySelectorAll('nav.tabs button');
+  var views = document.querySelectorAll('.view');
+  function showView(name){
+    views.forEach(function(v){ v.classList.toggle('active', v.id === 'view-' + name); });
+    tabs.forEach(function(t){ t.setAttribute('aria-selected', t.dataset.view === name); });
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  tabs.forEach(function(t){ t.addEventListener('click', function(){ showView(t.dataset.view); }); });
+  document.querySelectorAll('[data-goto]').forEach(function(b){
+    b.addEventListener('click', function(){ showView(b.dataset.goto); });
+  });
+
+  /* ---------------- data ---------------- */
+  var COUNTRIES = [
+    {name:"Algeria", hague:true, note:"Member since 9 Jul 2026"},
+    {name:"Australia", hague:true},
+    {name:"Bangladesh", hague:true, note:"Member since 30 Mar 2025"},
+    {name:"Brazil", hague:true},
+    {name:"Canada", hague:true, note:"Member since 11 Jan 2024"},
+    {name:"China (mainland)", hague:true, note:"Member since 7 Nov 2023"},
+    {name:"Fiji", hague:false},
+    {name:"France", hague:true},
+    {name:"Germany", hague:true},
+    {name:"India", hague:false},
+    {name:"Indonesia", hague:true, note:"Member since 4 Jun 2022"},
+    {name:"Israel", hague:true},
+    {name:"Japan", hague:true},
+    {name:"Malaysia", hague:false},
+    {name:"Mexico", hague:true},
+    {name:"Pakistan", hague:true, note:"Member since 9 Mar 2023"},
+    {name:"Philippines", hague:true},
+    {name:"Qatar", hague:false},
+    {name:"Samoa", hague:false},
+    {name:"Saudi Arabia", hague:true, note:"Member since 7 Dec 2022"},
+    {name:"Singapore", hague:true},
+    {name:"South Africa", hague:true},
+    {name:"South Korea", hague:true},
+    {name:"Thailand", hague:false, note:"Joins 28 Feb 2027 — not yet in force"},
+    {name:"Tonga", hague:false},
+    {name:"United Arab Emirates", hague:false},
+    {name:"United Kingdom", hague:true},
+    {name:"United States", hague:true},
+    {name:"Vietnam", hague:true, note:"Member from 11 Sep 2026"}
+  ];
+
+  var DOC_TYPES = [
+    {id:"birth", label:"Birth certificate", notariseDefault:false},
+    {id:"marriage", label:"Marriage certificate", notariseDefault:false},
+    {id:"death", label:"Death certificate", notariseDefault:false},
+    {id:"police", label:"Police vetting result", notariseDefault:false},
+    {id:"nocheck", label:"Certificate of no impediment", notariseDefault:false},
+    {id:"academic", label:"Academic transcript / degree", notariseDefault:true},
+    {id:"poa", label:"Power of attorney", notariseDefault:true},
+    {id:"statdec", label:"Statutory declaration", notariseDefault:true},
+    {id:"company", label:"Company / business document", notariseDefault:true},
+    {id:"other", label:"Other document", notariseDefault:true}
+  ];
+
+  /* Our own coordination fees — defaults match nzdocumentassist.co.nz/pricing/ (checked 10 Sep 2026) */
+  var RATES_OURS = [
+    {id:"docCheck", label:"Document check & admin setup — per case", value:59},
+    {id:"apostilleCoord", label:"Apostille coordination — per document", value:89},
+    {id:"authCoord", label:"Authentication coordination — per document", value:119},
+    {id:"notaryCoord", label:"Notary appointment coordination — per document", value:69},
+    {id:"translationCoord", label:"Translation coordination — per document", value:49},
+    {id:"courierCoord", label:"Courier & document return coordination — per case", value:39},
+    {id:"fullServicePkg", label:"Full-Service Document Handling — flat, per case", value:149},
+    {id:"intlPkg", label:"International Multi-Step Case — flat, per case", value:199},
+    {id:"priorityAdmin", label:"Priority admin handling — add-on, per case", value:50},
+    {id:"aucklandAppt", label:"Auckland in-person appointment — add-on, per case", value:49}
+  ];
+
+  /* Estimated third-party & government costs — pass-through, not our fee */
+  var RATES_THIRDPARTY = [
+    {id:"dia", label:"Apostille — govt fee, per document (Hague)", value:37},
+    {id:"categoryA", label:"Category A authentication — govt fee, per document", value:65},
+    {id:"categoryB", label:"Category B authentication — govt fee, per document", value:223},
+    {id:"priority", label:"Govt urgent surcharge — per document (Apostille / Cat. A)", value:120},
+    {id:"notary", label:"Notary Public's own fee — per document (example)", value:45},
+    {id:"translator", label:"Translator's own fee — per document (example)", value:95},
+    {id:"courierMetro", label:"Courier cost — metro NZ (flat)", value:25},
+    {id:"courierRegional", label:"Courier cost — other NZ region (flat)", value:40},
+    {id:"courierEmbassy", label:"Courier cost — Wellington embassy drop-off (flat)", value:55},
+    {id:"courierIntl", label:"Courier cost — international (flat)", value:85}
+  ];
+
+  var COURIERS = [
+    {name:"Auckland CBD Same-Day Couriers", region:"metro", city:"Auckland", tags:["Same-day","DIA drop-off"]},
+    {name:"Wellington Beehive Courier Co.", region:"embassy", city:"Wellington", tags:["Embassy runs","DIA counter"]},
+    {name:"Christchurch Canterbury Express", region:"metro", city:"Christchurch", tags:["Same-day","Rural pickup"]},
+    {name:"Capital Diplomatic Runners", region:"embassy", city:"Wellington", tags:["Embassy runs","Appointment booking"]},
+    {name:"Waikato & Bay Regional Couriers", region:"regional", city:"Hamilton / Tauranga", tags:["2-3 day","Rural coverage"]},
+    {name:"Otago Southern Courier Network", region:"regional", city:"Dunedin / Queenstown", tags:["2-3 day","Rural coverage"]},
+    {name:"North Shore Metro Movers", region:"metro", city:"Auckland", tags:["Same-day","Client pickup"]},
+    {name:"Wellington CBD Legal Couriers", region:"embassy", city:"Wellington", tags:["DIA counter","Embassy runs"]},
+    {name:"Global Docs Freight Partners", region:"international", city:"Auckland (int'l hub)", tags:["International","Tracked"]}
+  ];
+
+  var RESOURCES = [
+    {title:"Apostille (Hague Convention)", body:"DIA's Authentication Unit is New Zealand's Competent Authority for apostilles. An apostille is accepted directly in other Convention member countries — no embassy involvement needed. Published fee: $37 for the first certificate (paper or e-apostille)."},
+    {title:"Category A authentication", body:"For most non-Hague destinations: DIA authenticates the signature and seal, MFAT verifies it, then the destination country's embassy in NZ completes final verification. Published fee: $65 first certificate. Standard and urgent service both available."},
+    {title:"Category B authentication", body:"For destinations requiring fuller embassy legalisation. Published fee: $223 first certificate — no DIA-set turnaround, and urgent service is not offered, since timing depends on the embassy's own process."},
+    {title:"Notarisation rules", body:"DIA only accepts certification from a New Zealand Notary Public — a Justice of the Peace or solicitor's certification will be rejected. The notary must include their name, signature, seal or stamp, and the date."},
+    {title:"Documents that usually don't need notarising", body:"NZ government-issued originals — birth, marriage and death certificates, and police vetting results issued directly by the agency — generally go straight to DIA authentication without notarisation."},
+    {title:"Standard vs urgent service", body:"Standard service is 15 working days. Urgent service is 5 working days for an extra fee ($120 published), but is only offered for apostilles and Category A — not Category B."},
+    {title:"DIA's own courier costs", body:"Separate from our own courier coordination fee: DIA charges around $5.30 to courier documents back within NZ, and roughly $22–$64 internationally depending on the destination region."},
+    {title:"How our pricing is structured", body:"Our coordination fees (document check, apostille or authentication coordination, notary and translation coordination, courier coordination) cover our own work. Government, Notary Public, translator and courier costs are separate, at cost, and not ours to set."},
+    {title:"Sources & verification", body:"Coordination fee defaults are drawn from nzdocumentassist.co.nz/pricing/. Government and Convention figures are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table. All checked 10 Sep 2026 — fees, categories and Convention membership change, so confirm current figures before quoting a client."}
+  ];
+
+  /* ---------------- destination select ---------------- */
+  var destSelect = document.getElementById('destCountry');
+  COUNTRIES.forEach(function(c){
+    var opt = document.createElement('option');
+    opt.value = c.name; opt.textContent = c.name + (c.hague ? "" : " (non-Hague)");
+    destSelect.appendChild(opt);
+  });
+
+  /* ---------------- rate card ---------------- */
+  function buildRateGrid(gridEl, rates){
+    rates.forEach(function(r){
+      var label = document.createElement('label');
+      label.textContent = r.label; label.setAttribute('for','rate-'+r.id);
+      var input = document.createElement('input');
+      input.type = 'number'; input.id = 'rate-'+r.id; input.value = r.value; input.min = 0; input.step = 1;
+      input.addEventListener('input', recalc);
+      gridEl.appendChild(label); gridEl.appendChild(input);
+    });
+  }
+  buildRateGrid(document.getElementById('rateGridOurs'), RATES_OURS);
+  buildRateGrid(document.getElementById('rateGridThirdParty'), RATES_THIRDPARTY);
+  function rate(id){ return parseFloat(document.getElementById('rate-'+id).value) || 0; }
+
+  /* ---------------- document lines ---------------- */
+  var docLinesEl = document.getElementById('docLines');
+  var lineCount = 0;
+
+  function addDocLine(presetType, presetQty){
+    lineCount++;
+    var row = document.createElement('div');
+    row.className = 'doc-line';
+    row.dataset.id = lineCount;
+
+    var typeSelect = document.createElement('select');
+    DOC_TYPES.forEach(function(d){
+      var o = document.createElement('option'); o.value = d.id; o.textContent = d.label;
+      typeSelect.appendChild(o);
+    });
+    typeSelect.value = presetType || DOC_TYPES[0].id;
+
+    var qtyInput = document.createElement('input');
+    qtyInput.type = 'number'; qtyInput.min = 1; qtyInput.value = presetQty || 1;
+    qtyInput.setAttribute('aria-label','Quantity');
+
+    var notariseLabel = document.createElement('label');
+    notariseLabel.className = 'toggle';
+    var notariseCheck = document.createElement('input');
+    notariseCheck.type = 'checkbox';
+    var docDef = DOC_TYPES.find(function(d){ return d.id === (presetType || DOC_TYPES[0].id); });
+    notariseCheck.checked = docDef ? docDef.notariseDefault : false;
+    notariseLabel.appendChild(notariseCheck);
+    notariseLabel.appendChild(document.createTextNode(' Notarise'));
+
+    var translateLabel = document.createElement('label');
+    translateLabel.className = 'toggle';
+    var translateCheck = document.createElement('input');
+    translateCheck.type = 'checkbox';
+    translateLabel.appendChild(translateCheck);
+    translateLabel.appendChild(document.createTextNode(' Translate'));
+
+    typeSelect.addEventListener('change', function(){
+      var def = DOC_TYPES.find(function(d){ return d.id === typeSelect.value; });
+      notariseCheck.checked = def ? def.notariseDefault : false;
+      recalc();
+    });
+    qtyInput.addEventListener('input', recalc);
+    notariseCheck.addEventListener('change', recalc);
+    translateCheck.addEventListener('change', recalc);
+
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'icon-btn'; removeBtn.type = 'button'; removeBtn.title = 'Remove line';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.addEventListener('click', function(){
+      row.remove();
+      recalc();
+    });
+
+    row.appendChild(typeSelect);
+    row.appendChild(qtyInput);
+    row.appendChild(notariseLabel);
+    row.appendChild(translateLabel);
+    row.appendChild(removeBtn);
+    docLinesEl.appendChild(row);
+    recalc();
+  }
+  document.getElementById('addDocLine').addEventListener('click', function(){ addDocLine(); });
+
+  document.getElementById('resetEstimate').addEventListener('click', function(){
+    docLinesEl.innerHTML = '';
+    addDocLine('birth', 2);
+    document.getElementById('urgentToggle').checked = false;
+    document.getElementById('courierRegion').value = 'none';
+    document.getElementById('servicePackage').value = 'individual';
+    document.getElementById('priorityAdminToggle').checked = false;
+    document.getElementById('aucklandApptToggle').checked = false;
+    destSelect.value = 'Australia';
+    recalc();
+  });
+
+  destSelect.addEventListener('change', recalc);
+  document.getElementById('urgentToggle').addEventListener('change', recalc);
+  document.getElementById('courierRegion').addEventListener('change', recalc);
+  document.getElementById('servicePackage').addEventListener('change', recalc);
+  document.getElementById('priorityAdminToggle').addEventListener('change', recalc);
+  document.getElementById('aucklandApptToggle').addEventListener('change', recalc);
+
+  /* ---------------- certificate ref ---------------- */
+  var certRefEl = document.getElementById('certRef');
+  var certDateEl = document.getElementById('certDate');
+  function newRef(){
+    var n = Math.floor(1000 + Math.random()*8999);
+    certRefEl.textContent = 'EST-' + new Date().getFullYear() + '-' + n;
+  }
+  newRef();
+  certDateEl.textContent = new Date().toLocaleDateString('en-NZ', {day:'2-digit', month:'short', year:'numeric'});
+
+  /* ---------------- calculation ---------------- */
+  var fmt = new Intl.NumberFormat('en-NZ', {style:'currency', currency:'NZD'});
+
+  var categoryRow = document.getElementById('categoryRow');
+  var authCategorySelect = document.getElementById('authCategory');
+  var categoryHint = document.getElementById('categoryHint');
+  var urgentToggleEl = document.getElementById('urgentToggle');
+  authCategorySelect.addEventListener('change', recalc);
+
+  function recalc(){
+    var country = COUNTRIES.find(function(c){ return c.name === destSelect.value; }) || COUNTRIES[0];
+    categoryRow.style.display = country.hague ? 'none' : 'grid';
+
+    var authCategory = authCategorySelect.value;
+    var urgentAvailable = country.hague || authCategory === 'A';
+    urgentToggleEl.disabled = !urgentAvailable;
+    if(!urgentAvailable){ urgentToggleEl.checked = false; }
+    var urgent = urgentToggleEl.checked && urgentAvailable;
+    categoryHint.textContent = !country.hague && authCategory === 'B'
+      ? 'No DIA-set turnaround — depends on the embassy.'
+      : '';
+
+    var courierChoice = document.getElementById('courierRegion').value;
+    var servicePackage = document.getElementById('servicePackage').value;
+    var priorityAdmin = document.getElementById('priorityAdminToggle').checked;
+    var aucklandAppt = document.getElementById('aucklandApptToggle').checked;
+
+    var docRows = [];
+    docLinesEl.querySelectorAll('.doc-line').forEach(function(row){
+      var selects = row.querySelectorAll('select');
+      var inputs = row.querySelectorAll('input');
+      var typeId = selects[0].value;
+      var qty = parseInt(inputs[0].value, 10) || 0;
+      var notarise = inputs[1].checked;
+      var translate = inputs[2].checked;
+      var def = DOC_TYPES.find(function(d){ return d.id === typeId; });
+      if(qty > 0){ docRows.push({def:def, qty:qty, notarise:notarise, translate:translate}); }
+    });
+
+    var oursLines = [], thirdLines = [];
+    var subOurs = 0, subThird = 0;
+    var pathLabel = country.hague ? 'Apostille' : (authCategory === 'A' ? 'Category A authentication' : 'Category B authentication');
+
+    if(docRows.length > 0){
+      /* ---- our coordination fees ---- */
+      if(servicePackage === 'individual'){
+        oursLines.push({name:'Document check & admin setup', qty:1, sub:'Per case', amount: rate('docCheck')});
+        docRows.forEach(function(r){
+          var coordFee = (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty;
+          oursLines.push({name:(country.hague ? 'Apostille coordination' : 'Authentication coordination') + ' — ' + r.def.label, qty:r.qty, sub:pathLabel, amount:coordFee});
+          if(r.notarise){ oursLines.push({name:'Notary appointment coordination — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('notaryCoord') * r.qty}); }
+          if(r.translate){ oursLines.push({name:'Translation coordination — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('translationCoord') * r.qty}); }
+        });
+        if(courierChoice !== 'none'){ oursLines.push({name:'Courier & document return coordination', qty:1, sub:'Per case', amount: rate('courierCoord')}); }
+      } else if(servicePackage === 'fullservice'){
+        oursLines.push({name:'Full-Service Document Handling', qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('fullServicePkg')});
+      } else {
+        oursLines.push({name:'International Multi-Step Case', qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('intlPkg')});
+      }
+      if(priorityAdmin){ oursLines.push({name:'Priority admin handling', qty:1, sub:'Add-on — our admin only', amount: rate('priorityAdmin')}); }
+      if(aucklandAppt){ oursLines.push({name:'Auckland in-person appointment', qty:1, sub:'Add-on', amount: rate('aucklandAppt')}); }
+
+      /* ---- third-party & government pass-through ---- */
+      docRows.forEach(function(r){
+        var govtBase = country.hague ? rate('dia') : (authCategory === 'A' ? rate('categoryA') : rate('categoryB'));
+        var govtFee = (govtBase + (urgent ? rate('priority') : 0)) * r.qty;
+        thirdLines.push({name: (country.hague ? 'Apostille' : pathLabel) + ' govt fee — ' + r.def.label, qty:r.qty, sub:'Est. govt fee' + (urgent ? ' + urgent surcharge' : ''), amount: govtFee});
+        if(r.notarise){ thirdLines.push({name:'Notary Public\'s own fee — ' + r.def.label, qty:r.qty, sub:'Est., set by notary', amount: rate('notary') * r.qty}); }
+        if(r.translate){ thirdLines.push({name:'Translator\'s own fee — ' + r.def.label, qty:r.qty, sub:'Est., set by translator', amount: rate('translator') * r.qty}); }
+      });
+      var courierFee = 0, courierLabel = '';
+      if(courierChoice === 'metro'){ courierFee = rate('courierMetro'); courierLabel = 'Courier cost — metro NZ'; }
+      else if(courierChoice === 'regional'){ courierFee = rate('courierRegional'); courierLabel = 'Courier cost — other NZ region'; }
+      else if(courierChoice === 'embassy'){ courierFee = rate('courierEmbassy'); courierLabel = 'Courier cost — Wellington embassy drop-off'; }
+      else if(courierChoice === 'international'){ courierFee = rate('courierIntl'); courierLabel = 'Courier cost — international'; }
+      if(courierFee > 0){ thirdLines.push({name:courierLabel, qty:1, sub:'Est., pass-through', amount:courierFee}); }
+    }
+
+    oursLines.forEach(function(l){ subOurs += l.amount; });
+    thirdLines.forEach(function(l){ subThird += l.amount; });
+    var total = subOurs + subThird;
+
+    /* pathway text */
+    var pathwayEl = document.getElementById('certPathway');
+    if(country.hague){
+      pathwayEl.innerHTML = '<b>Pathway: Apostille (Hague Convention).</b> ' + country.name + ' is shown as a Convention member — DIA issues the apostille directly; standard service is 15 working days, urgent is 5.';
+      pathwayEl.style.borderLeft = '3px solid var(--good)';
+    } else if(authCategory === 'A'){
+      pathwayEl.innerHTML = '<b>Pathway: Category A authentication.</b> ' + country.name + ' is shown as outside the Convention. DIA authenticates the signature and seal, MFAT verifies it, then the destination country\'s embassy completes final verification. Standard is 15 working days, urgent is 5.';
+      pathwayEl.style.borderLeft = '3px solid var(--gold)';
+    } else {
+      pathwayEl.innerHTML = '<b>Pathway: Category B authentication.</b> ' + country.name + ' is shown as outside the Convention and requiring full embassy legalisation. There is no DIA-set turnaround and urgent service is not available — timing depends on the embassy.';
+      pathwayEl.style.borderLeft = '3px solid var(--seal)';
+    }
+
+    /* table */
+    var tbody = document.getElementById('certLines');
+    tbody.innerHTML = '';
+
+    function lineRow(l){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><span class="cert-line-name">' + l.name + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + l.sub + '</span></td>' +
+        '<td>' + fmt.format(l.amount) + '</td>';
+      return tr;
+    }
+    function groupHeadRow(text){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="2" style="padding-top:14px; font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); border-bottom:none; text-align:left; font-family:var(--font-body);">' + text + '</td>';
+      return tr;
+    }
+    function subtotalRow(text, amount){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td style="font-weight:700; color:var(--ink);">' + text + '</td><td style="font-weight:700; color:var(--ink);">' + fmt.format(amount) + '</td>';
+      return tr;
+    }
+
+    if(docRows.length === 0){
+      var emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = '<td colspan="2" style="color:var(--ink-faint);">Add a document line to see an estimate.</td>';
+      tbody.appendChild(emptyRow);
+    } else {
+      tbody.appendChild(groupHeadRow('Our coordination fees'));
+      oursLines.forEach(function(l){ tbody.appendChild(lineRow(l)); });
+      tbody.appendChild(subtotalRow('Our fees subtotal', subOurs));
+      tbody.appendChild(groupHeadRow('Estimated third-party & government costs'));
+      thirdLines.forEach(function(l){ tbody.appendChild(lineRow(l)); });
+      tbody.appendChild(subtotalRow('Third-party subtotal (est.)', subThird));
+    }
+
+    document.getElementById('certTotal').textContent = fmt.format(total);
+  }
+
+  /* seed default lines */
+  addDocLine('birth', 2);
+  addDocLine('academic', 1);
+  destSelect.value = 'Australia';
+  recalc();
+
+  /* ---------------- couriers ---------------- */
+  var courierFilters = document.getElementById('courierFilters');
+  var courierGrid = document.getElementById('courierGrid');
+  var REGIONS = [
+    {id:'all', label:'All regions'},
+    {id:'metro', label:'Metro NZ'},
+    {id:'regional', label:'Other NZ region'},
+    {id:'embassy', label:'Wellington embassy'},
+    {id:'international', label:'International'}
+  ];
+  var activeRegion = 'all';
+  REGIONS.forEach(function(r){
+    var chip = document.createElement('button');
+    chip.className = 'chip'; chip.textContent = r.label;
+    chip.setAttribute('aria-pressed', r.id === 'all');
+    chip.addEventListener('click', function(){
+      activeRegion = r.id;
+      courierFilters.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed','false'); });
+      chip.setAttribute('aria-pressed','true');
+      renderCouriers();
+    });
+    courierFilters.appendChild(chip);
+  });
+
+  function renderCouriers(){
+    courierGrid.innerHTML = '';
+    COURIERS.filter(function(c){ return activeRegion === 'all' || c.region === activeRegion; })
+      .forEach(function(c){
+        var card = document.createElement('div');
+        card.className = 'courier-card';
+        var tagHtml = c.tags.map(function(t){ return '<span class="badge neutral">' + t + '</span>'; }).join('');
+        card.innerHTML =
+          '<h4>' + c.name + '</h4>' +
+          '<span class="region">' + c.city + '</span>' +
+          '<p>Sample courier partner covering ' + (REGIONS.find(function(r){return r.id===c.region;}) || {}).label.toLowerCase() + ' pickups and deliveries.</p>' +
+          '<div class="courier-meta">' + tagHtml + '</div>';
+        courierGrid.appendChild(card);
+      });
+  }
+  renderCouriers();
+
+  /* ---------------- resources ---------------- */
+  var resourceGrid = document.getElementById('resourceGrid');
+  RESOURCES.forEach(function(r){
+    var card = document.createElement('div');
+    card.className = 'resource-card';
+    card.innerHTML = '<h4>' + r.title + '</h4><p>' + r.body + '</p>';
+    resourceGrid.appendChild(card);
+  });
+
+  var countryBody = document.getElementById('countryTableBody');
+  COUNTRIES.forEach(function(c){
+    var tr = document.createElement('tr');
+    var badge = c.hague
+      ? '<span class="badge good">Hague member</span>'
+      : '<span class="badge seal">Non-Hague</span>';
+    tr.innerHTML =
+      '<td>' + c.name + (c.note ? ' <span style="color:var(--ink-faint); font-size:.78rem;">(' + c.note + ')</span>' : '') + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td>' + (c.hague ? 'Apostille only' : 'Authentication + embassy legalisation') + '</td>';
+    countryBody.appendChild(tr);
+  });
+
+  /* ---------------- access toggle ---------------- */
+  var accessButtons = document.querySelectorAll('.access-toggle button');
+  accessButtons.forEach(function(b){
+    b.addEventListener('click', function(){
+      accessButtons.forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+      b.setAttribute('aria-pressed','true');
+      document.querySelectorAll('.access-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('access-' + b.dataset.access).classList.add('active');
+    });
+  });
+
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('service-worker.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>
