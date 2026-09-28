@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -354,7 +352,9 @@
     .doc-line{ grid-template-columns:1fr 1fr; }
     .doc-line select{ grid-column:1 / -1; }
   }
+  @page{ margin:0; }
   @media print{
+    body{ padding:14mm 12mm !important; }
     header.topbar, .steps, .value-grid, .disclaimer, .features, nav, .builder-form-col, .cert-actions{ display:none !important; }
     body{ background:#fff; }
     .certificate{ box-shadow:none; border:none; position:static; }
@@ -487,9 +487,9 @@
   <!-- ================= ESTIMATE BUILDER ================= -->
   <section class="view" id="view-estimate">
     <div class="section-head">
-      <span class="eyebrow">Estimate builder</span>
-      <h2>Price a request with our own numbers</h2>
-      <p>Fees below are pre-loaded from our published pricing. Government, notary, translator and courier costs are estimates you can adjust.</p>
+      <span class="eyebrow">Estimate</span>
+      <h2>Your apostille and document estimate</h2>
+      <p>Based on your destination country, documents and delivery needs, with each step shown on its own line.</p>
     </div>
 
     <div class="builder">
@@ -616,7 +616,7 @@
           <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
           <button class="btn btn-ghost" id="resetEstimate" type="button">Reset</button>
         </div>
-        <p class="cert-fine">Planning estimate only. "Our coordination fees" are our own charges; "third-party & government costs" are estimates only, set by DIA, the relevant embassy, the Notary Public, translator or courier — not by us, and not guaranteed. Confirm current figures before issuing this to a client.</p>
+        <p class="cert-fine">Planning estimate only. "Our coordination fees" are our own charges; "third-party & government costs" are estimates only, set by DIA, the relevant embassy, the Notary Public, translator or courier — not by us, and not guaranteed.</p>
       </div>
     </div>
   </section>
