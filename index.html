@@ -248,7 +248,13 @@
 
   details.ratecard{ margin-top:4px; }
   details.ratecard summary{ cursor:pointer; font-size:.82rem; font-weight:700; color:var(--ink-soft); padding:6px 0; }
-  .rate-grid{ display:grid; grid-template-columns:1fr 110px; gap:10px 14px; align-items:center; margin-top:12px; }
+  .rate-grid{ display:grid; grid-template-columns:1fr 96px 74px; gap:10px 12px; align-items:start; margin-top:12px; }
+  .rate-grid .rate-add{ display:flex; flex-direction:column; align-items:center; gap:4px; font-size:.72rem; color:var(--ink-soft); padding-top:4px; }
+  .rate-grid .rate-add label{ display:flex; align-items:center; gap:4px; cursor:pointer; font-size:.78rem; color:var(--ink); }
+  .rate-grid .rate-add input[type=number]{ width:58px; padding:4px 6px; font-size:.8rem; text-align:center; }
+  .rate-grid .rate-add input[type=number]:disabled{ opacity:.35; }
+  .rate-grid-head{ display:grid; grid-template-columns:1fr 96px 74px; gap:12px; font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); margin-top:12px; }
+  .rate-grid-head span:nth-child(2), .rate-grid-head span:nth-child(3){ text-align:center; }
   .rate-grid label{ font-size:.82rem; color:var(--ink-soft); }
   .rate-grid input.rate-label{ text-align:left; font-family:var(--font-body); font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:9px 11px; width:100%; min-width:0; }
   .rate-grid .rate-label-wrap{ display:flex; flex-direction:column; gap:3px; min-width:0; }
@@ -1002,6 +1008,9 @@
     recalc();
   };
   function buildRateGrid(gridEl, rates){
+    var head = document.createElement('div'); head.className = 'rate-grid-head';
+    head.innerHTML = '<span>Wording (shows on estimate)</span><span>Price</span><span>Add to estimate</span>';
+    gridEl.parentNode.insertBefore(head, gridEl);
     rates.forEach(function(r){
       var labelBox = document.createElement('input');
       labelBox.type = 'text'; labelBox.className = 'rate-label'; labelBox.id = 'label-'+r.id;
@@ -1022,7 +1031,16 @@
       input.type = 'number'; input.id = 'rate-'+r.id; input.value = r.value; input.min = 0; input.step = 1;
       input.setAttribute('aria-label', r.label + ' (NZD)');
       input.addEventListener('input', recalc);
-      gridEl.appendChild(wrap); gridEl.appendChild(input);
+      var add = document.createElement('div'); add.className = 'rate-add';
+      var addLabel = document.createElement('label');
+      var addCheck = document.createElement('input'); addCheck.type = 'checkbox'; addCheck.id = 'add-'+r.id; addCheck.className = 'manual-add';
+      addLabel.appendChild(addCheck); addLabel.appendChild(document.createTextNode(' Add'));
+      var addQty = document.createElement('input'); addQty.type = 'number'; addQty.min = 1; addQty.step = 1; addQty.value = 1; addQty.id = 'addqty-'+r.id; addQty.disabled = true;
+      addQty.title = 'Quantity'; addQty.setAttribute('aria-label', 'Quantity for ' + r.label);
+      addCheck.addEventListener('change', function(){ addQty.disabled = !addCheck.checked; recalc(); });
+      addQty.addEventListener('input', recalc);
+      add.appendChild(addLabel); add.appendChild(addQty);
+      gridEl.appendChild(wrap); gridEl.appendChild(input); gridEl.appendChild(add);
     });
   }
   buildRateGrid(document.getElementById('rateGridOurs'), RATES_OURS);
@@ -1111,6 +1129,7 @@
     document.querySelectorAll('#courierLegs input').forEach(function(c){ c.checked = false; });
     document.getElementById('servicePackage').value = 'individual';
     document.getElementById('priorityAdminToggle').checked = false;
+    document.querySelectorAll('input.manual-add').forEach(function(c){ c.checked = false; var q = document.getElementById('addqty-'+c.id.slice(4)); if(q){ q.value = 1; q.disabled = true; } });
     destSelect.value = 'Australia';
     recalc();
   });
@@ -1207,6 +1226,19 @@
       });
     }
 
+    /* ---- lines added by hand with the "Add" tick boxes ---- */
+    function manualLines(rates, target){
+      rates.forEach(function(r){
+        var cb = document.getElementById('add-'+r.id);
+        if(cb && cb.checked){
+          var q = parseInt(document.getElementById('addqty-'+r.id).value, 10) || 1;
+          target.push({name:L(r.id), qty:q, sub:'Added manually', amount: rate(r.id) * q});
+        }
+      });
+    }
+    manualLines(RATES_OURS, oursLines);
+    manualLines(RATES_THIRDPARTY, thirdLines);
+
     oursLines.forEach(function(l){ subOurs += l.amount; });
     thirdLines.forEach(function(l){ subThird += l.amount; });
     var total = subOurs + subThird;
@@ -1246,7 +1278,7 @@
       return tr;
     }
 
-    if(docRows.length === 0){
+    if(docRows.length === 0 && oursLines.length === 0 && thirdLines.length === 0){
       var emptyRow = document.createElement('tr');
       emptyRow.innerHTML = '<td colspan="2" style="color:var(--ink-faint);">Add a document line to see an estimate.</td>';
       tbody.appendChild(emptyRow);
