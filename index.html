@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -353,6 +354,14 @@
     .doc-line select{ grid-column:1 / -1; }
   }
   @page{ margin:0; }
+  .wording-bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:-14px 0 24px; }
+  .wording-bar button{ font:inherit; font-size:.85rem; padding:8px 14px; border-radius:var(--radius); border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+  .wording-bar button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .wording-bar .hint{ margin:0; }
+  body.editing-wording .wtxt{ outline:1px dashed var(--gold); outline-offset:2px; border-radius:2px; cursor:text; background:rgba(255,236,170,.25); }
+  body.editing-wording .wtxt:focus{ outline:2px solid var(--gold); background:#fff; }
+  @media print{ .wording-bar{ display:none !important; } }
+
   @media print{
     body{ padding:14mm 12mm !important; }
     header.topbar, .steps, .value-grid, .disclaimer, .features, nav, .builder-form-col, .cert-actions{ display:none !important; }
@@ -490,6 +499,11 @@
       <span class="eyebrow">Estimate</span>
       <h2>Your apostille and document estimate</h2>
       <p>Based on your destination country, documents and delivery needs, with each step shown on its own line.</p>
+    </div>
+    <div class="wording-bar">
+      <button type="button" id="editWordingBtn">Edit wording</button>
+      <button type="button" id="resetWordingBtn">Restore original wording</button>
+      <span class="hint" id="wordingHint">Click “Edit wording”, then click any text on this page to change it. Changes save automatically in this browser.</span>
     </div>
 
     <div class="builder">
@@ -1309,6 +1323,68 @@
       navigator.serviceWorker.register('service-worker.js').catch(function () {});
     });
   }
+
+  /* ---------------- editable wording ---------------- */
+  (function(){
+    var KEY = 'nzda-estimate-wording-v1';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ saved = {}; }
+    function store(){ try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(e){} }
+    var roots = [document.querySelector('#view-estimate .section-head'), document.querySelector('#view-estimate .builder-form-col')];
+    var SKIP = 'script,style,select,option,button,textarea,input,.doc-line,.wtxt';
+    var spans = [];
+    roots.forEach(function(root){
+      if(!root) return;
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var nodes = [];
+      while(walker.nextNode()){
+        var n = walker.currentNode;
+        if(!n.nodeValue.trim()) continue;
+        if(n.parentElement && n.parentElement.closest(SKIP)) continue;
+        nodes.push(n);
+      }
+      nodes.forEach(function(n){
+        var raw = n.nodeValue, orig = raw.trim();
+        var lead = raw.match(/^\s*/)[0], trail = raw.match(/\s*$/)[0];
+        var span = document.createElement('span');
+        span.className = 'wtxt'; span.dataset.orig = orig;
+        span.textContent = Object.prototype.hasOwnProperty.call(saved, orig) ? saved[orig] : orig;
+        var frag = document.createDocumentFragment();
+        if(lead) frag.appendChild(document.createTextNode(lead));
+        frag.appendChild(span);
+        if(trail) frag.appendChild(document.createTextNode(trail));
+        n.parentNode.replaceChild(frag, n);
+        spans.push(span);
+      });
+    });
+    var editing = false;
+    var btn = document.getElementById('editWordingBtn');
+    function setEditing(on){
+      editing = on;
+      document.body.classList.toggle('editing-wording', on);
+      spans.forEach(function(sp){ if(on){ sp.setAttribute('contenteditable','true'); } else { sp.removeAttribute('contenteditable'); } });
+      btn.textContent = on ? 'Done editing' : 'Edit wording';
+      btn.classList.toggle('on', on);
+    }
+    btn.addEventListener('click', function(){ setEditing(!editing); });
+    document.getElementById('resetWordingBtn').addEventListener('click', function(){
+      saved = {}; store();
+      spans.forEach(function(sp){ sp.textContent = sp.dataset.orig; });
+    });
+    spans.forEach(function(sp){
+      sp.addEventListener('input', function(){
+        var t = sp.textContent.trim();
+        if(!t || t === sp.dataset.orig){ delete saved[sp.dataset.orig]; } else { saved[sp.dataset.orig] = t; }
+        store();
+      });
+      sp.addEventListener('blur', function(){ if(!sp.textContent.trim()){ sp.textContent = sp.dataset.orig; } });
+      sp.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); sp.blur(); } });
+    });
+    /* while editing, clicking text inside a label must not tick boxes or open menus */
+    document.addEventListener('click', function(e){
+      if(editing && e.target.closest && e.target.closest('.wtxt') && e.target.closest('label, summary')){ e.preventDefault(); }
+    }, true);
+  })();
 </script>
 </body>
 </html>
