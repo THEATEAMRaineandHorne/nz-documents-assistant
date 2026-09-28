@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,6 +250,10 @@
   details.ratecard summary{ cursor:pointer; font-size:.82rem; font-weight:700; color:var(--ink-soft); padding:6px 0; }
   .rate-grid{ display:grid; grid-template-columns:1fr 110px; gap:10px 14px; align-items:center; margin-top:12px; }
   .rate-grid label{ font-size:.82rem; color:var(--ink-soft); }
+  .rate-grid input.rate-label{ text-align:left; font-family:var(--font-body); font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:9px 11px; width:100%; min-width:0; }
+  .rate-grid .rate-label-wrap{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .rate-grid .rate-hint{ font-size:.72rem; color:var(--ink-faint); padding-left:2px; }
+  .rate-grid input.rate-label:focus{ outline:2px solid var(--gold); outline-offset:1px; }
   .rate-grid input{ text-align:right; font-family:var(--font-mono); }
 
   /* ---------- certificate ---------- */
@@ -931,29 +934,29 @@
 
   /* Our own coordination fees (incl. GST) — defaults match nzdocumentassist.co.nz/pricing/ (checked 12 Sep 2026) */
   var RATES_OURS = [
-    {id:"apostilleCoord", label:"Apostille coordination — per document", value:79},
-    {id:"authCoord", label:"Authentication coordination — per document", value:99},
-    {id:"notaryCoord", label:"Notary appointment coordination — per document", value:39},
-    {id:"translationCoord", label:"Translation coordination — per document", value:39},
-    {id:"courierCoord", label:"Courier & document return coordination — per case", value:25},
-    {id:"fullServicePkg", label:"Full-Service Document Handling — flat, per case", value:129},
-    {id:"intlPkg", label:"Complex/International Multi-Step Case — flat, per case", value:179},
-    {id:"priorityAdmin", label:"Priority administration — add-on, per case", value:50}
+    {id:"apostilleCoord", label:"Apostille coordination", hint:"Per document · Itemised package, Hague country", value:79},
+    {id:"authCoord", label:"Authentication coordination", hint:"Per document · Itemised package, non-Hague country", value:99},
+    {id:"notaryCoord", label:"Notary appointment coordination", hint:"Per document · Itemised package, when 'Notarise' is ticked", value:39},
+    {id:"translationCoord", label:"Translation coordination", hint:"Per document · Itemised package, when 'Translate' is ticked", value:39},
+    {id:"courierCoord", label:"Courier & document return coordination", hint:"Per case · Itemised package, when any courier box is ticked", value:25},
+    {id:"fullServicePkg", label:"Full-Service Document Handling", hint:"Flat, per case · when this package is selected", value:129},
+    {id:"intlPkg", label:"Complex/International Multi-Step Case", hint:"Flat, per case · when this package is selected", value:179},
+    {id:"priorityAdmin", label:"Priority administration", hint:"Per case · when 'Priority administration' is ticked", value:50}
   ];
 
   /* Estimated third-party & government costs — pass-through, not our fee */
   var RATES_THIRDPARTY = [
-    {id:"certOrder", label:"Certificate order — DIA (BDM) fee, per document (used when 'Order' is ticked on a document line)", value:35},
-    {id:"dia", label:"Apostille — govt fee, per document (Hague)", value:37},
-    {id:"categoryA", label:"Category A authentication — govt fee, per document", value:74},
-    {id:"categoryB", label:"Category B authentication — govt fee, per document", value:223},
-    {id:"priority", label:"Govt urgent surcharge — per document (used when 'Government urgent service' is ticked)", value:120},
-    {id:"notary", label:"Notary Public's own fee — per document (example)", value:45},
-    {id:"translator", label:"Translator's own fee — per document (example)", value:95},
-    {id:"courierMetro", label:"Courier cost — metro NZ (flat, when ticked above)", value:7},
-    {id:"courierRegional", label:"Courier cost — other NZ region (flat, when ticked above)", value:40},
-    {id:"courierEmbassy", label:"Courier cost — Wellington embassy drop-off (flat, when ticked above)", value:55},
-    {id:"courierIntl", label:"Courier cost — international (flat, when ticked above)", value:62}
+    {id:"certOrder", label:"Certificate order fee (DIA)", hint:"Per document · when 'Order' is ticked on a document line", value:35},
+    {id:"dia", label:"Apostille govt fee (DIA)", hint:"Per document · Hague countries", value:37},
+    {id:"categoryA", label:"Category A authentication govt fee", hint:"Per document · non-Hague, Category A", value:74},
+    {id:"categoryB", label:"Category B authentication govt fee", hint:"Per document · non-Hague, Category B", value:223},
+    {id:"priority", label:"DIA urgent service surcharge", hint:"Per document · when 'Government urgent service' is ticked", value:120},
+    {id:"notary", label:"Notary Public fee", hint:"Per document · when 'Notarise' is ticked (estimate)", value:45},
+    {id:"translator", label:"Translator fee", hint:"Per document · when 'Translate' is ticked (estimate)", value:95},
+    {id:"courierMetro", label:"Courier — metro NZ", hint:"Flat · when the Metro NZ courier box is ticked", value:7},
+    {id:"courierRegional", label:"Courier — other NZ region", hint:"Flat · when the Other NZ region box is ticked", value:40},
+    {id:"courierEmbassy", label:"Courier — Wellington embassy drop-off", hint:"Flat · when the embassy drop-off box is ticked", value:55},
+    {id:"courierIntl", label:"Courier — international", hint:"Flat · when the International box is ticked", value:62}
   ];
 
   var COURIERS = [
@@ -989,19 +992,43 @@
   });
 
   /* ---------------- rate card ---------------- */
+  var LABEL_KEY = 'nzda-estimate-rate-labels-v1';
+  var savedLabels = {};
+  try { savedLabels = JSON.parse(localStorage.getItem(LABEL_KEY) || '{}') || {}; } catch(e){ savedLabels = {}; }
+  function saveLabels(){ try { localStorage.setItem(LABEL_KEY, JSON.stringify(savedLabels)); } catch(e){} }
+  window.nzdaResetRateLabels = function(){
+    savedLabels = {}; saveLabels();
+    document.querySelectorAll('input.rate-label').forEach(function(b){ b.value = b.dataset.orig; });
+    recalc();
+  };
   function buildRateGrid(gridEl, rates){
     rates.forEach(function(r){
-      var label = document.createElement('label');
-      label.textContent = r.label; label.setAttribute('for','rate-'+r.id);
+      var labelBox = document.createElement('input');
+      labelBox.type = 'text'; labelBox.className = 'rate-label'; labelBox.id = 'label-'+r.id;
+      labelBox.dataset.orig = r.label;
+      labelBox.value = Object.prototype.hasOwnProperty.call(savedLabels, r.id) ? savedLabels[r.id] : r.label;
+      labelBox.setAttribute('aria-label', 'Wording for: ' + r.label);
+      labelBox.addEventListener('input', function(){
+        var t = labelBox.value.trim();
+        if(!t || t === r.label){ delete savedLabels[r.id]; } else { savedLabels[r.id] = labelBox.value; }
+        saveLabels();
+        recalc();
+      });
+      labelBox.addEventListener('blur', function(){ if(!labelBox.value.trim()){ labelBox.value = r.label; recalc(); } });
+      var wrap = document.createElement('div'); wrap.className = 'rate-label-wrap';
+      wrap.appendChild(labelBox);
+      if(r.hint){ var h = document.createElement('span'); h.className = 'rate-hint'; h.textContent = r.hint; wrap.appendChild(h); }
       var input = document.createElement('input');
       input.type = 'number'; input.id = 'rate-'+r.id; input.value = r.value; input.min = 0; input.step = 1;
+      input.setAttribute('aria-label', r.label + ' (NZD)');
       input.addEventListener('input', recalc);
-      gridEl.appendChild(label); gridEl.appendChild(input);
+      gridEl.appendChild(wrap); gridEl.appendChild(input);
     });
   }
   buildRateGrid(document.getElementById('rateGridOurs'), RATES_OURS);
   buildRateGrid(document.getElementById('rateGridThirdParty'), RATES_THIRDPARTY);
   function rate(id){ return parseFloat(document.getElementById('rate-'+id).value) || 0; }
+  function L(id){ var b = document.getElementById('label-'+id); return (b && b.value.trim()) || (b && b.dataset.orig) || id; }
 
   /* ---------------- document lines ---------------- */
   var docLinesEl = document.getElementById('docLines');
@@ -1152,31 +1179,31 @@
       if(servicePackage === 'individual'){
         docRows.forEach(function(r){
           var coordFee = (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty;
-          oursLines.push({name:(country.hague ? 'Apostille coordination' : 'Authentication coordination') + ' — ' + r.def.label, qty:r.qty, sub:pathLabel, amount:coordFee});
-          if(r.notarise){ oursLines.push({name:'Notary appointment coordination — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('notaryCoord') * r.qty}); }
-          if(r.translate){ oursLines.push({name:'Translation coordination — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('translationCoord') * r.qty}); }
+          oursLines.push({name:(country.hague ? L('apostilleCoord') : L('authCoord')) + ' — ' + r.def.label, qty:r.qty, sub:pathLabel, amount:coordFee});
+          if(r.notarise){ oursLines.push({name:L('notaryCoord') + ' — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('notaryCoord') * r.qty}); }
+          if(r.translate){ oursLines.push({name:L('translationCoord') + ' — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('translationCoord') * r.qty}); }
         });
-        if(courierLegs.length > 0){ oursLines.push({name:'Courier & document return coordination', qty:1, sub:'Per case', amount: rate('courierCoord')}); }
+        if(courierLegs.length > 0){ oursLines.push({name:L('courierCoord'), qty:1, sub:'Per case', amount: rate('courierCoord')}); }
       } else if(servicePackage === 'fullservice'){
-        oursLines.push({name:'Full-Service Document Handling', qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('fullServicePkg')});
+        oursLines.push({name:L('fullServicePkg'), qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('fullServicePkg')});
       } else {
-        oursLines.push({name:'Complex/International Multi-Step Case', qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('intlPkg')});
+        oursLines.push({name:L('intlPkg'), qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('intlPkg')});
       }
-      if(priorityAdmin){ oursLines.push({name:'Priority administration', qty:1, sub:'Add-on — our admin only', amount: rate('priorityAdmin')}); }
+      if(priorityAdmin){ oursLines.push({name:L('priorityAdmin'), qty:1, sub:'Add-on — our admin only', amount: rate('priorityAdmin')}); }
 
       /* ---- third-party & government pass-through ---- */
       docRows.forEach(function(r){
-        if(r.order){ thirdLines.push({name:'Certificate order, DIA (BDM) — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: rate('certOrder') * r.qty}); }
+        if(r.order){ thirdLines.push({name:L('certOrder') + ' — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: rate('certOrder') * r.qty}); }
         var govtBase = country.hague ? rate('dia') : (authCategory === 'A' ? rate('categoryA') : rate('categoryB'));
-        thirdLines.push({name: (country.hague ? 'Apostille' : pathLabel) + ' govt fee — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: govtBase * r.qty});
-        if(urgent){ thirdLines.push({name:'Govt urgent service surcharge — ' + r.def.label, qty:r.qty, sub:'5 working days', amount: rate('priority') * r.qty}); }
-        if(r.notarise){ thirdLines.push({name:'Notary Public\'s own fee — ' + r.def.label, qty:r.qty, sub:'Est., set by notary', amount: rate('notary') * r.qty}); }
-        if(r.translate){ thirdLines.push({name:'Translator\'s own fee — ' + r.def.label, qty:r.qty, sub:'Est., set by translator', amount: rate('translator') * r.qty}); }
+        thirdLines.push({name: (country.hague ? L('dia') : (authCategory === 'A' ? L('categoryA') : L('categoryB'))) + ' — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: govtBase * r.qty});
+        if(urgent){ thirdLines.push({name:L('priority') + ' — ' + r.def.label, qty:r.qty, sub:'5 working days', amount: rate('priority') * r.qty}); }
+        if(r.notarise){ thirdLines.push({name:L('notary') + ' — ' + r.def.label, qty:r.qty, sub:'Est., set by notary', amount: rate('notary') * r.qty}); }
+        if(r.translate){ thirdLines.push({name:L('translator') + ' — ' + r.def.label, qty:r.qty, sub:'Est., set by translator', amount: rate('translator') * r.qty}); }
       });
       var COURIER_LEGS = {metro:['courierMetro','Courier — metro NZ'], regional:['courierRegional','Courier — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], international:['courierIntl','Courier — international']};
       courierLegs.forEach(function(leg){
         var c = COURIER_LEGS[leg];
-        if(c){ thirdLines.push({name:c[1], qty:1, sub:'Est., pass-through', amount: rate(c[0])}); }
+        if(c){ thirdLines.push({name:L(c[0]), qty:1, sub:'Est., pass-through', amount: rate(c[0])}); }
       });
     }
 
@@ -1204,7 +1231,7 @@
     function lineRow(l){
       var tr = document.createElement('tr');
       tr.innerHTML =
-        '<td><span class="cert-line-name">' + l.name + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + l.sub + '</span></td>' +
+        '<td><span class="cert-line-name">' + String(l.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + l.sub + '</span></td>' +
         '<td>' + fmt.format(l.amount) + '</td>';
       return tr;
     }
@@ -1370,6 +1397,7 @@
     document.getElementById('resetWordingBtn').addEventListener('click', function(){
       saved = {}; store();
       spans.forEach(function(sp){ sp.textContent = sp.dataset.orig; });
+      if(window.nzdaResetRateLabels){ window.nzdaResetRateLabels(); }
     });
     spans.forEach(function(sp){
       sp.addEventListener('input', function(){
