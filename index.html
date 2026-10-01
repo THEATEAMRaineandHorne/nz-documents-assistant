@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -231,7 +232,7 @@
 
   .doc-lines{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
   .doc-line{
-    display:grid; grid-template-columns:1.3fr .5fr .62fr .62fr auto; gap:10px; align-items:center;
+    display:grid; grid-template-columns:1.3fr .5fr .62fr .62fr .55fr auto; gap:10px; align-items:center;
     padding:10px; background:var(--paper); border:1px solid var(--line-soft); border-radius:var(--radius);
   }
   .doc-line label.toggle{ font-size:.76rem; }
@@ -248,8 +249,18 @@
 
   details.ratecard{ margin-top:4px; }
   details.ratecard summary{ cursor:pointer; font-size:.82rem; font-weight:700; color:var(--ink-soft); padding:6px 0; }
-  .rate-grid{ display:grid; grid-template-columns:1fr 110px; gap:10px 14px; align-items:center; margin-top:12px; }
+  .rate-grid{ display:grid; grid-template-columns:1fr 96px 74px; gap:10px 12px; align-items:start; margin-top:12px; }
+  .rate-grid .rate-add{ display:flex; flex-direction:column; align-items:center; gap:4px; font-size:.72rem; color:var(--ink-soft); padding-top:4px; }
+  .rate-grid .rate-add label{ display:flex; align-items:center; gap:4px; cursor:pointer; font-size:.78rem; color:var(--ink); }
+  .rate-grid .rate-add input[type=number]{ width:58px; padding:4px 6px; font-size:.8rem; text-align:center; }
+  .rate-grid .rate-add input[type=number]:disabled{ opacity:.35; }
+  .rate-grid-head{ display:grid; grid-template-columns:1fr 96px 74px; gap:12px; font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); margin-top:12px; }
+  .rate-grid-head span:nth-child(2), .rate-grid-head span:nth-child(3){ text-align:center; }
   .rate-grid label{ font-size:.82rem; color:var(--ink-soft); }
+  .rate-grid input.rate-label{ text-align:left; font-family:var(--font-body); font-size:.85rem; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:9px 11px; width:100%; min-width:0; }
+  .rate-grid .rate-label-wrap{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .rate-grid .rate-hint{ font-size:.72rem; color:var(--ink-faint); padding-left:2px; }
+  .rate-grid input.rate-label:focus{ outline:2px solid var(--gold); outline-offset:1px; }
   .rate-grid input{ text-align:right; font-family:var(--font-mono); }
 
   /* ---------- certificate ---------- */
@@ -352,7 +363,17 @@
     .doc-line{ grid-template-columns:1fr 1fr; }
     .doc-line select{ grid-column:1 / -1; }
   }
+  @page{ margin:0; }
+  .wording-bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:-14px 0 24px; }
+  .wording-bar button{ font:inherit; font-size:.85rem; padding:8px 14px; border-radius:var(--radius); border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+  .wording-bar button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .wording-bar .hint{ margin:0; }
+  body.editing-wording .wtxt{ outline:1px dashed var(--gold); outline-offset:2px; border-radius:2px; cursor:text; background:rgba(255,236,170,.25); }
+  body.editing-wording .wtxt:focus{ outline:2px solid var(--gold); background:#fff; }
+  @media print{ .wording-bar{ display:none !important; } }
+
   @media print{
+    body{ padding:14mm 12mm !important; }
     header.topbar, .steps, .value-grid, .disclaimer, .features, nav, .builder-form-col, .cert-actions{ display:none !important; }
     body{ background:#fff; }
     .certificate{ box-shadow:none; border:none; position:static; }
@@ -446,7 +467,7 @@
         </div>
       </div>
       <div class="disclaimer">
-        <strong>Not legal advice.</strong> NZ Documents Assistant is a planning and estimating tool for experienced facilitators. Our coordination fee defaults are drawn from nzdocumentassist.co.nz/pricing/ as of 1 Oct 2026; Convention status comes from dia.govt.nz, govt.nz and the HCCH apostille status table as of 10 Sep 2026 — none of it replaces DIA, embassy or consular guidance, professional judgement, or your own obligations under NZ law. Convention status, fees and processing times change — confirm current requirements before relying on any figure shown here.
+        <strong>Not legal advice.</strong> NZ Documents Assistant is a planning and estimating tool for experienced facilitators. Default rates and Convention status are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table as of 10 Sep 2026, but none of it replaces DIA, embassy or consular guidance, professional judgement, or your own obligations under NZ law. Convention status, fees and processing times change — confirm current requirements before relying on any figure shown here.
       </div>
     </div>
 
@@ -485,9 +506,14 @@
   <!-- ================= ESTIMATE BUILDER ================= -->
   <section class="view" id="view-estimate">
     <div class="section-head">
-      <span class="eyebrow">Estimate builder</span>
-      <h2>Price a request with our own numbers</h2>
-      <p>Fees below are pre-loaded from our published pricing. Government, notary, translator and courier costs are estimates you can adjust.</p>
+      <span class="eyebrow">Estimate</span>
+      <h2>Your apostille and document estimate</h2>
+      <p>Based on your destination country, documents and delivery needs, with each step shown on its own line.</p>
+    </div>
+    <div class="wording-bar">
+      <button type="button" id="editWordingBtn">Edit wording</button>
+      <button type="button" id="resetWordingBtn">Restore original wording</button>
+      <span class="hint" id="wordingHint">Click “Edit wording”, then click any text on this page to change it. Changes save automatically in this browser.</span>
     </div>
 
     <div class="builder">
@@ -502,12 +528,14 @@
               <select id="destCountry"></select>
             </div>
             <div class="field">
-              <label for="courierRegion">Courier coverage needed</label>
-              <select id="courierRegion">
-                <option value="none">No courier — client handles delivery</option>
-                <option value="nz">Within NZ</option>
-                <option value="intl">International (e.g. to an embassy overseas)</option>
-              </select>
+              <label>Courier legs needed (tick all that apply)</label>
+              <div id="courierLegs" style="display:flex; flex-direction:column; gap:6px; padding-top:4px;">
+                <label class="toggle"><input type="checkbox" value="metro"> Metro NZ (Auckland / Wellington / Christchurch)</label>
+                <label class="toggle"><input type="checkbox" value="regional"> Other NZ region</label>
+                <label class="toggle"><input type="checkbox" value="embassy"> Wellington embassy drop-off</label>
+                <label class="toggle"><input type="checkbox" value="international"> International</label>
+              </div>
+              <span class="hint" style="margin:4px 0 0;">Leave all unticked if the client handles delivery.</span>
             </div>
           </div>
 
@@ -526,28 +554,31 @@
           </div>
 
           <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="urgentToggle"> Urgent Service — our $49 expedited processing + $120 govt urgent fee (5 working days, Apostille / Category A only)</label>
+            <label class="toggle"><input type="checkbox" id="urgentToggle"> Government urgent service (5 working days, Apostille / Category A only)</label>
           </div>
         </div>
 
         <div class="panel">
           <h3>Our service package</h3>
-          <span class="hint">All our coordination fees include GST — free initial document assessment, every amount shown before any work starts. Full-Service is a flat starting fee that replaces itemised coordination below; Complex/Multi-Country cases need a custom quote. Government, notary, translator and courier costs are still added separately either way.</span>
+          <span class="hint">All our coordination fees include GST. Full-Service and Complex/International Multi-Step are flat starting fees that replace itemised coordination fees below — government, notary, translator and courier costs are still added separately either way.</span>
           <div class="field-row">
             <div class="field">
               <label for="servicePackage">Package</label>
               <select id="servicePackage">
                 <option value="individual">Itemised coordination (per step)</option>
                 <option value="fullservice">Full-Service Document Handling — from $129</option>
-                <option value="international">Complex/Multi-Country Case — custom quote required</option>
+                <option value="international">Complex/International Multi-Step Case — from $179</option>
               </select>
             </div>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="priorityAdminToggle"> Priority administration (+$50 — speeds up our admin only, not government/third-party processing)</label>
           </div>
         </div>
 
         <div class="panel">
           <h3>Documents</h3>
-          <span class="hint">Add one line per document type. Tick notarise for documents needing a New Zealand Notary Public first — a JP or solicitor's certification isn't accepted. Tick translate if the document needs a translation.</span>
+          <span class="hint">Add one line per document type. Tick notarise for documents needing a New Zealand Notary Public first — a JP or solicitor's certification isn't accepted. Tick translate if the document needs a translation. Tick order if we order the certificate from DIA (BDM) for the client.</span>
           <div class="doc-lines" id="docLines"></div>
           <button class="add-line" id="addDocLine" type="button">+ Add document line</button>
         </div>
@@ -609,7 +640,7 @@
           <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
           <button class="btn btn-ghost" id="resetEstimate" type="button">Reset</button>
         </div>
-        <p class="cert-fine">Planning estimate only. "Our coordination fees" are our own charges; "third-party & government costs" are estimates only, set by DIA, the relevant embassy, the Notary Public, translator or courier — not by us, and not guaranteed. Confirm current figures before issuing this to a client.</p>
+        <p class="cert-fine">Planning estimate only. "Our coordination fees" are our own charges; "third-party & government costs" are estimates only, set by DIA, the relevant embassy, the Notary Public, translator or courier — not by us, and not guaranteed.</p>
       </div>
     </div>
   </section>
@@ -725,35 +756,174 @@
 
   /* ---------------- data ---------------- */
   var COUNTRIES = [
+    {name:"Afghanistan", hague:false},
+    {name:"Albania", hague:true},
     {name:"Algeria", hague:true, note:"Member since 9 Jul 2026"},
+    {name:"Andorra", hague:true},
+    {name:"Angola", hague:false},
+    {name:"Antigua and Barbuda", hague:true},
+    {name:"Argentina", hague:true},
+    {name:"Armenia", hague:true},
     {name:"Australia", hague:true},
+    {name:"Austria", hague:true},
+    {name:"Azerbaijan", hague:true},
+    {name:"Bahamas", hague:true},
+    {name:"Bahrain", hague:true},
     {name:"Bangladesh", hague:true, note:"Member since 30 Mar 2025"},
+    {name:"Barbados", hague:true},
+    {name:"Belarus", hague:true},
+    {name:"Belgium", hague:true},
+    {name:"Belize", hague:true},
+    {name:"Bolivia", hague:true},
+    {name:"Bosnia and Herzegovina", hague:true},
+    {name:"Botswana", hague:true},
     {name:"Brazil", hague:true},
+    {name:"Brunei", hague:true},
+    {name:"Bulgaria", hague:true},
+    {name:"Burundi", hague:true},
+    {name:"Cabo Verde", hague:true},
+    {name:"Cambodia", hague:false},
+    {name:"Cameroon", hague:false},
     {name:"Canada", hague:true, note:"Member since 11 Jan 2024"},
+    {name:"Chile", hague:true},
     {name:"China (mainland)", hague:true, note:"Member since 7 Nov 2023"},
-    {name:"Fiji", hague:false},
+    {name:"Colombia", hague:true},
+    {name:"Cook Islands", hague:true},
+    {name:"Costa Rica", hague:true},
+    {name:"Croatia", hague:true},
+    {name:"Cyprus", hague:true},
+    {name:"Czechia", hague:true},
+    {name:"Denmark", hague:true},
+    {name:"Dominica", hague:true},
+    {name:"Dominican Republic", hague:true},
+    {name:"Ecuador", hague:true},
+    {name:"Egypt", hague:false},
+    {name:"El Salvador", hague:true},
+    {name:"Estonia", hague:true},
+    {name:"Eswatini", hague:true},
+    {name:"Ethiopia", hague:false},
+    {name:"Fiji", hague:true},
+    {name:"Finland", hague:true},
     {name:"France", hague:true},
+    {name:"Georgia", hague:true},
     {name:"Germany", hague:true},
-    {name:"India", hague:false},
+    {name:"Ghana", hague:false},
+    {name:"Greece", hague:true},
+    {name:"Grenada", hague:true},
+    {name:"Guatemala", hague:true},
+    {name:"Guyana", hague:true},
+    {name:"Honduras", hague:true},
+    {name:"Hong Kong SAR", hague:true, note:"Covered by the Convention as a Special Administrative Region"},
+    {name:"Hungary", hague:true},
+    {name:"Iceland", hague:true},
+    {name:"India", hague:true},
     {name:"Indonesia", hague:true, note:"Member since 4 Jun 2022"},
+    {name:"Iran", hague:false},
+    {name:"Iraq", hague:false},
+    {name:"Ireland", hague:true},
     {name:"Israel", hague:true},
+    {name:"Italy", hague:true},
+    {name:"Jamaica", hague:true},
     {name:"Japan", hague:true},
+    {name:"Jordan", hague:false},
+    {name:"Kazakhstan", hague:true},
+    {name:"Kenya", hague:false},
+    {name:"Kiribati", hague:false},
+    {name:"Kosovo", hague:true},
+    {name:"Kuwait", hague:false},
+    {name:"Kyrgyzstan", hague:true},
+    {name:"Laos", hague:false},
+    {name:"Latvia", hague:true},
+    {name:"Lebanon", hague:false},
+    {name:"Lesotho", hague:true},
+    {name:"Liberia", hague:true},
+    {name:"Libya", hague:false},
+    {name:"Liechtenstein", hague:true},
+    {name:"Lithuania", hague:true},
+    {name:"Luxembourg", hague:true},
+    {name:"Macao SAR", hague:true, note:"Covered by the Convention as a Special Administrative Region"},
+    {name:"Malawi", hague:true},
     {name:"Malaysia", hague:false},
+    {name:"Malta", hague:true},
+    {name:"Marshall Islands", hague:true},
+    {name:"Mauritius", hague:true},
     {name:"Mexico", hague:true},
+    {name:"Moldova", hague:true},
+    {name:"Monaco", hague:true},
+    {name:"Mongolia", hague:true},
+    {name:"Montenegro", hague:true},
+    {name:"Morocco", hague:true},
+    {name:"Myanmar", hague:false},
+    {name:"Namibia", hague:true},
+    {name:"Nauru", hague:false},
+    {name:"Nepal", hague:false},
+    {name:"Netherlands", hague:true},
+    {name:"Nicaragua", hague:true},
+    {name:"Nigeria", hague:false},
+    {name:"Niue", hague:true},
+    {name:"North Macedonia", hague:true},
+    {name:"Norway", hague:true},
+    {name:"Oman", hague:true},
     {name:"Pakistan", hague:true, note:"Member since 9 Mar 2023"},
+    {name:"Palau", hague:true},
+    {name:"Panama", hague:true},
+    {name:"Papua New Guinea", hague:false},
+    {name:"Paraguay", hague:true},
+    {name:"Peru", hague:true},
     {name:"Philippines", hague:true},
+    {name:"Poland", hague:true},
+    {name:"Portugal", hague:true},
     {name:"Qatar", hague:false},
-    {name:"Samoa", hague:false},
+    {name:"Romania", hague:true},
+    {name:"Russia", hague:true},
+    {name:"Rwanda", hague:true, note:"Member since 5 Jun 2024"},
+    {name:"Saint Kitts and Nevis", hague:true},
+    {name:"Saint Lucia", hague:true},
+    {name:"Saint Vincent and the Grenadines", hague:true},
+    {name:"Samoa", hague:true},
+    {name:"San Marino", hague:true},
+    {name:"Sao Tome and Principe", hague:true},
     {name:"Saudi Arabia", hague:true, note:"Member since 7 Dec 2022"},
+    {name:"Senegal", hague:true, note:"Member since 23 Mar 2023"},
+    {name:"Serbia", hague:true},
+    {name:"Seychelles", hague:true},
     {name:"Singapore", hague:true},
+    {name:"Slovakia", hague:true},
+    {name:"Slovenia", hague:true},
+    {name:"Solomon Islands", hague:false},
+    {name:"Somalia", hague:false},
     {name:"South Africa", hague:true},
     {name:"South Korea", hague:true},
+    {name:"Spain", hague:true},
+    {name:"Sri Lanka", hague:false},
+    {name:"Sudan", hague:false},
+    {name:"Suriname", hague:true},
+    {name:"Sweden", hague:true},
+    {name:"Switzerland", hague:true},
+    {name:"Syria", hague:false},
+    {name:"Taiwan", hague:false, note:"Not a Convention party — check with the Taipei Economic and Cultural Office"},
+    {name:"Tajikistan", hague:true},
+    {name:"Tanzania", hague:false},
     {name:"Thailand", hague:false, note:"Joins 28 Feb 2027 — not yet in force"},
-    {name:"Tonga", hague:false},
+    {name:"Timor-Leste", hague:false},
+    {name:"Tonga", hague:true},
+    {name:"Trinidad and Tobago", hague:true},
+    {name:"Tunisia", hague:true},
+    {name:"Türkiye", hague:true},
+    {name:"Tuvalu", hague:false},
+    {name:"Uganda", hague:false},
+    {name:"Ukraine", hague:true},
     {name:"United Arab Emirates", hague:false},
     {name:"United Kingdom", hague:true},
     {name:"United States", hague:true},
-    {name:"Vietnam", hague:true, note:"Member from 11 Sep 2026"}
+    {name:"Uruguay", hague:true},
+    {name:"Uzbekistan", hague:true},
+    {name:"Vanuatu", hague:true},
+    {name:"Venezuela", hague:true},
+    {name:"Vietnam", hague:true, note:"Member from 11 Sep 2026"},
+    {name:"Yemen", hague:false},
+    {name:"Zambia", hague:false},
+    {name:"Zimbabwe", hague:false}
   ];
 
   var DOC_TYPES = [
@@ -766,33 +936,34 @@
     {id:"poa", label:"Power of attorney", notariseDefault:true},
     {id:"statdec", label:"Statutory declaration", notariseDefault:true},
     {id:"company", label:"Company / business document", notariseDefault:true},
-    {id:"bdmOrder", label:"Order BDM certificate (birth/marriage/death — we obtain it)", notariseDefault:false, isBdmOrder:true},
     {id:"other", label:"Other document", notariseDefault:true}
   ];
 
-  /* Our own coordination fees (incl. GST) — defaults match nzdocumentassist.co.nz/pricing/ (checked 1 Oct 2026) */
+  /* Our own coordination fees (incl. GST) — defaults match nzdocumentassist.co.nz/pricing/ (checked 12 Sep 2026) */
   var RATES_OURS = [
-    {id:"apostilleCoord", label:"Apostille coordination — per document", value:79},
-    {id:"authCoord", label:"Authentication coordination — per document", value:99},
-    {id:"bdmCoord", label:"BDM certificate ordering coordination — per certificate", value:15},
-    {id:"notaryCoord", label:"Notary appointment coordination — per document", value:39},
-    {id:"translationCoord", label:"Translation coordination — per document", value:39},
-    {id:"courierCoord", label:"Courier & document return coordination — per case", value:25},
-    {id:"fullServicePkg", label:"Full-Service Document Handling — flat, per case", value:129},
-    {id:"expedited", label:"Expedited processing — Urgent Service, per case", value:49}
+    {id:"apostilleCoord", label:"Apostille coordination", hint:"Per document · Itemised package, Hague country", value:79},
+    {id:"authCoord", label:"Authentication coordination", hint:"Per document · Itemised package, non-Hague country", value:99},
+    {id:"notaryCoord", label:"Notary appointment coordination", hint:"Per document · Itemised package, when 'Notarise' is ticked", value:39},
+    {id:"translationCoord", label:"Translation coordination", hint:"Per document · Itemised package, when 'Translate' is ticked", value:39},
+    {id:"courierCoord", label:"Courier & document return coordination", hint:"Per case · Itemised package, when any courier box is ticked", value:25},
+    {id:"fullServicePkg", label:"Full-Service Document Handling", hint:"Flat, per case · when this package is selected", value:129},
+    {id:"intlPkg", label:"Complex/International Multi-Step Case", hint:"Flat, per case · when this package is selected", value:179},
+    {id:"priorityAdmin", label:"Priority administration", hint:"Per case · when 'Priority administration' is ticked", value:50}
   ];
 
   /* Estimated third-party & government costs — pass-through, not our fee */
   var RATES_THIRDPARTY = [
-    {id:"dia", label:"Apostille — govt fee, per document (Hague)", value:37},
-    {id:"categoryA", label:"Category A authentication — govt fee, per document", value:74},
-    {id:"categoryB", label:"Category B authentication — govt fee, per document", value:223},
-    {id:"priority", label:"Govt urgent fee — per document (Apostille / Cat. A)", value:120},
-    {id:"notary", label:"Notary Public's own fee — per document (example)", value:45},
-    {id:"translator", label:"Translator's own fee — per document (example)", value:95},
-    {id:"bdmCert", label:"BDM certificate (standard) — per certificate", value:35},
-    {id:"diaCourierNZ", label:"DIA courier — within NZ", value:7},
-    {id:"diaCourierIntl", label:"DIA courier — international (e.g. to UK, varies by destination)", value:53}
+    {id:"certOrder", label:"Certificate order fee (DIA)", hint:"Per document · when 'Order' is ticked on a document line", value:35},
+    {id:"dia", label:"Apostille govt fee (DIA)", hint:"Per document · Hague countries", value:37},
+    {id:"categoryA", label:"Category A authentication govt fee", hint:"Per document · non-Hague, Category A", value:74},
+    {id:"categoryB", label:"Category B authentication govt fee", hint:"Per document · non-Hague, Category B", value:223},
+    {id:"priority", label:"DIA urgent service surcharge", hint:"Per document · when 'Government urgent service' is ticked", value:120},
+    {id:"notary", label:"Notary Public fee", hint:"Per document · when 'Notarise' is ticked (estimate)", value:45},
+    {id:"translator", label:"Translator fee", hint:"Per document · when 'Translate' is ticked (estimate)", value:95},
+    {id:"courierMetro", label:"Courier — metro NZ", hint:"Flat · when the Metro NZ courier box is ticked", value:7},
+    {id:"courierRegional", label:"Courier — other NZ region", hint:"Flat · when the Other NZ region box is ticked", value:40},
+    {id:"courierEmbassy", label:"Courier — Wellington embassy drop-off", hint:"Flat · when the embassy drop-off box is ticked", value:55},
+    {id:"courierIntl", label:"Courier — international", hint:"Flat · when the International box is ticked", value:62}
   ];
 
   var COURIERS = [
@@ -809,15 +980,14 @@
 
   var RESOURCES = [
     {title:"Apostille (Hague Convention)", body:"DIA's Authentication Unit is New Zealand's Competent Authority for apostilles. An apostille is accepted directly in other Convention member countries — no embassy involvement needed. Published fee: $37 for the first certificate (paper or e-apostille)."},
-    {title:"Category A authentication", body:"For most non-Hague destinations: DIA authenticates the signature and seal, MFAT verifies it, then the destination country's embassy in NZ completes final verification. Govt fee: $74 first certificate. Standard and urgent service both available."},
-    {title:"Category B authentication", body:"For destinations requiring fuller embassy legalisation. Govt fee: $223 first certificate — no DIA-set turnaround, and urgent service is not offered, since timing depends on the embassy's own process."},
+    {title:"Category A authentication", body:"For most non-Hague destinations: DIA authenticates the signature and seal, MFAT verifies it, then the destination country's embassy in NZ completes final verification. Published fee: $74 first certificate. Standard and urgent service both available."},
+    {title:"Category B authentication", body:"For destinations requiring fuller embassy legalisation. Published fee: $223 first certificate — no DIA-set turnaround, and urgent service is not offered, since timing depends on the embassy's own process."},
     {title:"Notarisation rules", body:"DIA only accepts certification from a New Zealand Notary Public — a Justice of the Peace or solicitor's certification will be rejected. The notary must include their name, signature, seal or stamp, and the date."},
     {title:"Documents that usually don't need notarising", body:"NZ government-issued originals — birth, marriage and death certificates, and police vetting results issued directly by the agency — generally go straight to DIA authentication without notarisation."},
-    {title:"Ordering a BDM certificate", body:"If a client doesn't have the original birth, marriage or death certificate, we can order it from Births, Deaths & Marriages on their behalf — our coordination fee plus the standard BDM certificate fee, before it goes on to apostille or authentication."},
-    {title:"Urgent Service", body:"Standard DIA processing is 15 working days. Urgent Service combines our expedited-processing fee with DIA's own urgent fee to bring it down to 5 working days — only offered for apostilles and Category A, not Category B."},
-    {title:"DIA's own courier costs", body:"Separate from our own courier coordination fee: DIA charges around $7 to courier documents back within NZ, and roughly $53 for international return (e.g. to the UK) — the international figure varies by destination."},
-    {title:"How our pricing is structured", body:"Our coordination fees (apostille or authentication coordination, BDM ordering, notary and translation coordination, courier coordination — all GST-inclusive) cover our own work. Government, Notary Public, translator and courier costs are separate, at cost, and not ours to set. Every amount is shown before any work starts, and an initial document assessment is free."},
-    {title:"Sources & verification", body:"Coordination fee defaults are drawn from nzdocumentassist.co.nz/pricing/, last checked 1 Oct 2026. Convention status figures are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table, checked 10 Sep 2026. Fees, categories and Convention membership change, so confirm current figures before quoting a client."}
+    {title:"Standard vs urgent service", body:"Standard service is 15 working days. Urgent service is 5 working days for an extra fee ($120 published), but is only offered for apostilles and Category A — not Category B."},
+    {title:"DIA's own courier costs", body:"Separate from our own courier coordination fee: DIA charges around $5.30 to courier documents back within NZ, and roughly $22–$64 internationally depending on the destination region."},
+    {title:"How our pricing is structured", body:"Our coordination fees (apostille or authentication coordination, notary and translation coordination, courier coordination — all GST-inclusive) cover our own work. Government, Notary Public, translator and courier costs are separate, at cost, and not ours to set."},
+    {title:"Sources & verification", body:"Coordination fee defaults are drawn from nzdocumentassist.co.nz/pricing/, last checked 12 Sep 2026. Government and Convention figures are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table, checked 10 Sep 2026. Fees, categories and Convention membership change, so confirm current figures before quoting a client."}
   ];
 
   /* ---------------- destination select ---------------- */
@@ -829,19 +999,55 @@
   });
 
   /* ---------------- rate card ---------------- */
+  var LABEL_KEY = 'nzda-estimate-rate-labels-v1';
+  var savedLabels = {};
+  try { savedLabels = JSON.parse(localStorage.getItem(LABEL_KEY) || '{}') || {}; } catch(e){ savedLabels = {}; }
+  function saveLabels(){ try { localStorage.setItem(LABEL_KEY, JSON.stringify(savedLabels)); } catch(e){} }
+  window.nzdaResetRateLabels = function(){
+    savedLabels = {}; saveLabels();
+    document.querySelectorAll('input.rate-label').forEach(function(b){ b.value = b.dataset.orig; });
+    recalc();
+  };
   function buildRateGrid(gridEl, rates){
+    var head = document.createElement('div'); head.className = 'rate-grid-head';
+    head.innerHTML = '<span>Wording (shows on estimate)</span><span>Price</span><span>Add to estimate</span>';
+    gridEl.parentNode.insertBefore(head, gridEl);
     rates.forEach(function(r){
-      var label = document.createElement('label');
-      label.textContent = r.label; label.setAttribute('for','rate-'+r.id);
+      var labelBox = document.createElement('input');
+      labelBox.type = 'text'; labelBox.className = 'rate-label'; labelBox.id = 'label-'+r.id;
+      labelBox.dataset.orig = r.label;
+      labelBox.value = Object.prototype.hasOwnProperty.call(savedLabels, r.id) ? savedLabels[r.id] : r.label;
+      labelBox.setAttribute('aria-label', 'Wording for: ' + r.label);
+      labelBox.addEventListener('input', function(){
+        var t = labelBox.value.trim();
+        if(!t || t === r.label){ delete savedLabels[r.id]; } else { savedLabels[r.id] = labelBox.value; }
+        saveLabels();
+        recalc();
+      });
+      labelBox.addEventListener('blur', function(){ if(!labelBox.value.trim()){ labelBox.value = r.label; recalc(); } });
+      var wrap = document.createElement('div'); wrap.className = 'rate-label-wrap';
+      wrap.appendChild(labelBox);
+      if(r.hint){ var h = document.createElement('span'); h.className = 'rate-hint'; h.textContent = r.hint; wrap.appendChild(h); }
       var input = document.createElement('input');
       input.type = 'number'; input.id = 'rate-'+r.id; input.value = r.value; input.min = 0; input.step = 1;
+      input.setAttribute('aria-label', r.label + ' (NZD)');
       input.addEventListener('input', recalc);
-      gridEl.appendChild(label); gridEl.appendChild(input);
+      var add = document.createElement('div'); add.className = 'rate-add';
+      var addLabel = document.createElement('label');
+      var addCheck = document.createElement('input'); addCheck.type = 'checkbox'; addCheck.id = 'add-'+r.id; addCheck.className = 'manual-add';
+      addLabel.appendChild(addCheck); addLabel.appendChild(document.createTextNode(' Add'));
+      var addQty = document.createElement('input'); addQty.type = 'number'; addQty.min = 1; addQty.step = 1; addQty.value = 1; addQty.id = 'addqty-'+r.id; addQty.disabled = true;
+      addQty.title = 'Quantity'; addQty.setAttribute('aria-label', 'Quantity for ' + r.label);
+      addCheck.addEventListener('change', function(){ addQty.disabled = !addCheck.checked; recalc(); });
+      addQty.addEventListener('input', recalc);
+      add.appendChild(addLabel); add.appendChild(addQty);
+      gridEl.appendChild(wrap); gridEl.appendChild(input); gridEl.appendChild(add);
     });
   }
   buildRateGrid(document.getElementById('rateGridOurs'), RATES_OURS);
   buildRateGrid(document.getElementById('rateGridThirdParty'), RATES_THIRDPARTY);
   function rate(id){ return parseFloat(document.getElementById('rate-'+id).value) || 0; }
+  function L(id){ var b = document.getElementById('label-'+id); return (b && b.value.trim()) || (b && b.dataset.orig) || id; }
 
   /* ---------------- document lines ---------------- */
   var docLinesEl = document.getElementById('docLines');
@@ -880,6 +1086,14 @@
     translateLabel.appendChild(translateCheck);
     translateLabel.appendChild(document.createTextNode(' Translate'));
 
+    var orderLabel = document.createElement('label');
+    orderLabel.className = 'toggle';
+    orderLabel.title = 'We order this certificate from DIA (Births, Deaths & Marriages) for the client';
+    var orderCheck = document.createElement('input');
+    orderCheck.type = 'checkbox';
+    orderLabel.appendChild(orderCheck);
+    orderLabel.appendChild(document.createTextNode(' Order'));
+
     typeSelect.addEventListener('change', function(){
       var def = DOC_TYPES.find(function(d){ return d.id === typeSelect.value; });
       notariseCheck.checked = def ? def.notariseDefault : false;
@@ -888,6 +1102,7 @@
     qtyInput.addEventListener('input', recalc);
     notariseCheck.addEventListener('change', recalc);
     translateCheck.addEventListener('change', recalc);
+    orderCheck.addEventListener('change', recalc);
 
     var removeBtn = document.createElement('button');
     removeBtn.className = 'icon-btn'; removeBtn.type = 'button'; removeBtn.title = 'Remove line';
@@ -901,6 +1116,7 @@
     row.appendChild(qtyInput);
     row.appendChild(notariseLabel);
     row.appendChild(translateLabel);
+    row.appendChild(orderLabel);
     row.appendChild(removeBtn);
     docLinesEl.appendChild(row);
     recalc();
@@ -911,16 +1127,19 @@
     docLinesEl.innerHTML = '';
     addDocLine('birth', 2);
     document.getElementById('urgentToggle').checked = false;
-    document.getElementById('courierRegion').value = 'none';
+    document.querySelectorAll('#courierLegs input').forEach(function(c){ c.checked = false; });
     document.getElementById('servicePackage').value = 'individual';
+    document.getElementById('priorityAdminToggle').checked = false;
+    document.querySelectorAll('input.manual-add').forEach(function(c){ c.checked = false; var q = document.getElementById('addqty-'+c.id.slice(4)); if(q){ q.value = 1; q.disabled = true; } });
     destSelect.value = 'Australia';
     recalc();
   });
 
   destSelect.addEventListener('change', recalc);
   document.getElementById('urgentToggle').addEventListener('change', recalc);
-  document.getElementById('courierRegion').addEventListener('change', recalc);
+  document.querySelectorAll('#courierLegs input').forEach(function(c){ c.addEventListener('change', recalc); });
   document.getElementById('servicePackage').addEventListener('change', recalc);
+  document.getElementById('priorityAdminToggle').addEventListener('change', recalc);
 
   /* ---------------- certificate ref ---------------- */
   var certRefEl = document.getElementById('certRef');
@@ -954,8 +1173,9 @@
       ? 'No DIA-set turnaround — depends on the embassy.'
       : '';
 
-    var courierChoice = document.getElementById('courierRegion').value;
+    var courierLegs = Array.prototype.map.call(document.querySelectorAll('#courierLegs input:checked'), function(c){ return c.value; });
     var servicePackage = document.getElementById('servicePackage').value;
+    var priorityAdmin = document.getElementById('priorityAdminToggle').checked;
 
     var docRows = [];
     docLinesEl.querySelectorAll('.doc-line').forEach(function(row){
@@ -965,8 +1185,9 @@
       var qty = parseInt(inputs[0].value, 10) || 0;
       var notarise = inputs[1].checked;
       var translate = inputs[2].checked;
+      var order = inputs[3] ? inputs[3].checked : false;
       var def = DOC_TYPES.find(function(d){ return d.id === typeId; });
-      if(qty > 0){ docRows.push({def:def, qty:qty, notarise:notarise, translate:translate}); }
+      if(qty > 0){ docRows.push({def:def, qty:qty, notarise:notarise, translate:translate, order:order}); }
     });
 
     var oursLines = [], thirdLines = [];
@@ -977,40 +1198,47 @@
       /* ---- our coordination fees ---- */
       if(servicePackage === 'individual'){
         docRows.forEach(function(r){
-          if(r.def.isBdmOrder){
-            oursLines.push({name:'BDM certificate ordering coordination — ' + r.def.label, qty:r.qty, sub:'Per certificate', amount: rate('bdmCoord') * r.qty});
-          } else {
-            var coordFee = (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty;
-            oursLines.push({name:(country.hague ? 'Apostille coordination' : 'Authentication coordination') + ' — ' + r.def.label, qty:r.qty, sub:pathLabel, amount:coordFee});
-          }
-          if(r.notarise){ oursLines.push({name:'Notary appointment coordination — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('notaryCoord') * r.qty}); }
-          if(r.translate){ oursLines.push({name:'Translation coordination — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('translationCoord') * r.qty}); }
+          var coordFee = (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty;
+          oursLines.push({name:(country.hague ? L('apostilleCoord') : L('authCoord')) + ' — ' + r.def.label, qty:r.qty, sub:pathLabel, amount:coordFee});
+          if(r.notarise){ oursLines.push({name:L('notaryCoord') + ' — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('notaryCoord') * r.qty}); }
+          if(r.translate){ oursLines.push({name:L('translationCoord') + ' — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('translationCoord') * r.qty}); }
         });
-        if(courierChoice !== 'none'){ oursLines.push({name:'Courier & document return coordination', qty:1, sub:'Per case', amount: rate('courierCoord')}); }
+        if(courierLegs.length > 0){ oursLines.push({name:L('courierCoord'), qty:1, sub:'Per case', amount: rate('courierCoord')}); }
       } else if(servicePackage === 'fullservice'){
-        oursLines.push({name:'Full-Service Document Handling', qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('fullServicePkg')});
+        oursLines.push({name:L('fullServicePkg'), qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('fullServicePkg')});
       } else {
-        oursLines.push({name:'Complex/Multi-Country Case', qty:1, sub:'Custom quote required — contact us before confirming price', amount: 0});
+        oursLines.push({name:L('intlPkg'), qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('intlPkg')});
       }
-      if(urgent){ oursLines.push({name:'Expedited processing (Urgent Service)', qty:1, sub:'Our fee — per case', amount: rate('expedited')}); }
+      if(priorityAdmin){ oursLines.push({name:L('priorityAdmin'), qty:1, sub:'Add-on — our admin only', amount: rate('priorityAdmin')}); }
 
       /* ---- third-party & government pass-through ---- */
       docRows.forEach(function(r){
-        if(r.def.isBdmOrder){
-          thirdLines.push({name:'BDM certificate (standard) — ' + r.def.label, qty:r.qty, sub:'Est., set by Births, Deaths & Marriages', amount: rate('bdmCert') * r.qty});
-        } else {
-          var govtBase = country.hague ? rate('dia') : (authCategory === 'A' ? rate('categoryA') : rate('categoryB'));
-          var govtFee = (govtBase + (urgent ? rate('priority') : 0)) * r.qty;
-          thirdLines.push({name: (country.hague ? 'Apostille' : pathLabel) + ' govt fee — ' + r.def.label, qty:r.qty, sub:'Est. govt fee' + (urgent ? ' + urgent fee' : ''), amount: govtFee});
-        }
-        if(r.notarise){ thirdLines.push({name:'Notary Public\'s own fee — ' + r.def.label, qty:r.qty, sub:'Est., set by notary', amount: rate('notary') * r.qty}); }
-        if(r.translate){ thirdLines.push({name:'Translator\'s own fee — ' + r.def.label, qty:r.qty, sub:'Est., set by translator', amount: rate('translator') * r.qty}); }
+        if(r.order){ thirdLines.push({name:L('certOrder') + ' — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: rate('certOrder') * r.qty}); }
+        var govtBase = country.hague ? rate('dia') : (authCategory === 'A' ? rate('categoryA') : rate('categoryB'));
+        thirdLines.push({name: (country.hague ? L('dia') : (authCategory === 'A' ? L('categoryA') : L('categoryB'))) + ' — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: govtBase * r.qty});
+        if(urgent){ thirdLines.push({name:L('priority') + ' — ' + r.def.label, qty:r.qty, sub:'5 working days', amount: rate('priority') * r.qty}); }
+        if(r.notarise){ thirdLines.push({name:L('notary') + ' — ' + r.def.label, qty:r.qty, sub:'Est., set by notary', amount: rate('notary') * r.qty}); }
+        if(r.translate){ thirdLines.push({name:L('translator') + ' — ' + r.def.label, qty:r.qty, sub:'Est., set by translator', amount: rate('translator') * r.qty}); }
       });
-      var courierFee = 0, courierLabel = '';
-      if(courierChoice === 'nz'){ courierFee = rate('diaCourierNZ'); courierLabel = 'DIA courier — within NZ'; }
-      else if(courierChoice === 'intl'){ courierFee = rate('diaCourierIntl'); courierLabel = 'DIA courier — international (varies by destination)'; }
-      if(courierFee > 0){ thirdLines.push({name:courierLabel, qty:1, sub:'Est., pass-through', amount:courierFee}); }
+      var COURIER_LEGS = {metro:['courierMetro','Courier — metro NZ'], regional:['courierRegional','Courier — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], international:['courierIntl','Courier — international']};
+      courierLegs.forEach(function(leg){
+        var c = COURIER_LEGS[leg];
+        if(c){ thirdLines.push({name:L(c[0]), qty:1, sub:'Est., pass-through', amount: rate(c[0])}); }
+      });
     }
+
+    /* ---- lines added by hand with the "Add" tick boxes ---- */
+    function manualLines(rates, target){
+      rates.forEach(function(r){
+        var cb = document.getElementById('add-'+r.id);
+        if(cb && cb.checked){
+          var q = parseInt(document.getElementById('addqty-'+r.id).value, 10) || 1;
+          target.push({name:L(r.id), qty:q, sub:'Added manually', amount: rate(r.id) * q});
+        }
+      });
+    }
+    manualLines(RATES_OURS, oursLines);
+    manualLines(RATES_THIRDPARTY, thirdLines);
 
     oursLines.forEach(function(l){ subOurs += l.amount; });
     thirdLines.forEach(function(l){ subThird += l.amount; });
@@ -1036,7 +1264,7 @@
     function lineRow(l){
       var tr = document.createElement('tr');
       tr.innerHTML =
-        '<td><span class="cert-line-name">' + l.name + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + l.sub + '</span></td>' +
+        '<td><span class="cert-line-name">' + String(l.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + l.sub + '</span></td>' +
         '<td>' + fmt.format(l.amount) + '</td>';
       return tr;
     }
@@ -1051,7 +1279,7 @@
       return tr;
     }
 
-    if(docRows.length === 0){
+    if(docRows.length === 0 && oursLines.length === 0 && thirdLines.length === 0){
       var emptyRow = document.createElement('tr');
       emptyRow.innerHTML = '<td colspan="2" style="color:var(--ink-faint);">Add a document line to see an estimate.</td>';
       tbody.appendChild(emptyRow);
@@ -1155,6 +1383,69 @@
       navigator.serviceWorker.register('service-worker.js').catch(function () {});
     });
   }
+
+  /* ---------------- editable wording ---------------- */
+  (function(){
+    var KEY = 'nzda-estimate-wording-v1';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ saved = {}; }
+    function store(){ try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(e){} }
+    var roots = [document.querySelector('#view-estimate .section-head'), document.querySelector('#view-estimate .builder-form-col')];
+    var SKIP = 'script,style,select,option,button,textarea,input,.doc-line,.wtxt';
+    var spans = [];
+    roots.forEach(function(root){
+      if(!root) return;
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var nodes = [];
+      while(walker.nextNode()){
+        var n = walker.currentNode;
+        if(!n.nodeValue.trim()) continue;
+        if(n.parentElement && n.parentElement.closest(SKIP)) continue;
+        nodes.push(n);
+      }
+      nodes.forEach(function(n){
+        var raw = n.nodeValue, orig = raw.trim();
+        var lead = raw.match(/^\s*/)[0], trail = raw.match(/\s*$/)[0];
+        var span = document.createElement('span');
+        span.className = 'wtxt'; span.dataset.orig = orig;
+        span.textContent = Object.prototype.hasOwnProperty.call(saved, orig) ? saved[orig] : orig;
+        var frag = document.createDocumentFragment();
+        if(lead) frag.appendChild(document.createTextNode(lead));
+        frag.appendChild(span);
+        if(trail) frag.appendChild(document.createTextNode(trail));
+        n.parentNode.replaceChild(frag, n);
+        spans.push(span);
+      });
+    });
+    var editing = false;
+    var btn = document.getElementById('editWordingBtn');
+    function setEditing(on){
+      editing = on;
+      document.body.classList.toggle('editing-wording', on);
+      spans.forEach(function(sp){ if(on){ sp.setAttribute('contenteditable','true'); } else { sp.removeAttribute('contenteditable'); } });
+      btn.textContent = on ? 'Done editing' : 'Edit wording';
+      btn.classList.toggle('on', on);
+    }
+    btn.addEventListener('click', function(){ setEditing(!editing); });
+    document.getElementById('resetWordingBtn').addEventListener('click', function(){
+      saved = {}; store();
+      spans.forEach(function(sp){ sp.textContent = sp.dataset.orig; });
+      if(window.nzdaResetRateLabels){ window.nzdaResetRateLabels(); }
+    });
+    spans.forEach(function(sp){
+      sp.addEventListener('input', function(){
+        var t = sp.textContent.trim();
+        if(!t || t === sp.dataset.orig){ delete saved[sp.dataset.orig]; } else { saved[sp.dataset.orig] = t; }
+        store();
+      });
+      sp.addEventListener('blur', function(){ if(!sp.textContent.trim()){ sp.textContent = sp.dataset.orig; } });
+      sp.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); sp.blur(); } });
+    });
+    /* while editing, clicking text inside a label must not tick boxes or open menus */
+    document.addEventListener('click', function(e){
+      if(editing && e.target.closest && e.target.closest('.wtxt') && e.target.closest('label, summary')){ e.preventDefault(); }
+    }, true);
+  })();
 </script>
 </body>
 </html>
