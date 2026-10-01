@@ -1,4 +1,4 @@
-const CACHE = "nz-documents-assistant-v1";
+const CACHE = "nz-documents-assistant-v2";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", function (event) {
@@ -17,20 +17,19 @@ self.addEventListener("activate", function (event) {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch the live version so price/content updates
+// show up immediately. Only fall back to the cached copy when offline.
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
-      var network = fetch(event.request)
-        .then(function (response) {
-          if (response && response.status === 200) {
-            var copy = response.clone();
-            caches.open(CACHE).then(function (cache) { cache.put(event.request, copy); });
-          }
-          return response;
-        })
-        .catch(function () { return cached; });
-      return cached || network;
-    })
+    fetch(event.request)
+      .then(function (response) {
+        if (response && response.status === 200) {
+          var copy = response.clone();
+          caches.open(CACHE).then(function (cache) { cache.put(event.request, copy); });
+        }
+        return response;
+      })
+      .catch(function () { return caches.match(event.request); })
   );
 });
