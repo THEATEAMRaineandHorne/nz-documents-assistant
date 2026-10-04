@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -286,6 +285,11 @@
   table.cert-table td:last-child, table.cert-table th:last-child{ text-align:right; font-family:var(--font-mono); color:var(--ink); }
   .cert-line-name{ color:var(--ink); font-weight:600; }
   .cert-line-sub{ font-size:.76rem; color:var(--ink-faint); }
+  .cert-split{ color:var(--seal); }
+  .cert-includes{ font-size:.76rem; color:var(--ink-faint); margin:10px 0 0; padding-right:110px; }
+  .split-summary{ font-size:.76rem; color:var(--seal); margin:6px 0 0; padding-right:110px; }
+  .split-toggle{ margin-left:auto; align-self:center; font-size:.8rem; }
+  @media print{ .cert-split, .split-summary{ display:none !important; } }
 
   .cert-total{ display:flex; justify-content:space-between; align-items:baseline; padding-top:16px; margin-top:6px; border-top:2px solid var(--ink); }
   .cert-total .label{ font-family:var(--font-display); font-size:1rem; font-weight:600; }
@@ -628,6 +632,8 @@
             <span class="label">Estimated total</span>
             <span class="amount mono" id="certTotal">$0.00</span>
           </div>
+          <p class="cert-includes">All prices in NZD, GST inclusive. Each line includes our service fee and the government, Notary Public, translator or courier cost for that step.</p>
+          <p class="split-summary" id="splitSummary" style="display:none;"></p>
 
           <svg class="cert-seal" viewBox="0 0 100 100" aria-hidden="true">
             <circle cx="50" cy="50" r="46" stroke="var(--gold)" stroke-width="1.2" fill="none" stroke-dasharray="1.5 3.5"/>
@@ -639,8 +645,9 @@
         <div class="cert-actions">
           <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
           <button class="btn btn-ghost" id="resetEstimate" type="button">Reset</button>
+          <label class="toggle split-toggle" id="splitToggleWrap" style="display:none;"><input type="checkbox" id="showSplit"> Show fee split (staff only)</label>
         </div>
-        <p class="cert-fine">Planning estimate only. "Our coordination fees" are our own charges; "third-party & government costs" are estimates only, set by DIA, the relevant embassy, the Notary Public, translator or courier — not by us, and not guaranteed.</p>
+        <p class="cert-fine">Estimate only. Government, Notary Public, translator and courier costs included in each line are set by those providers and may change; we will confirm any difference before work goes ahead.</p>
       </div>
     </div>
   </section>
@@ -931,6 +938,7 @@
     {id:"marriage", label:"Marriage certificate", notariseDefault:false},
     {id:"death", label:"Death certificate", notariseDefault:false},
     {id:"police", label:"Police vetting result", notariseDefault:false},
+    {id:"criminal", label:"Criminal record (Ministry of Justice)", notariseDefault:false},
     {id:"nocheck", label:"Certificate of no impediment", notariseDefault:false},
     {id:"academic", label:"Academic transcript / degree", notariseDefault:true},
     {id:"poa", label:"Power of attorney", notariseDefault:true},
@@ -943,7 +951,7 @@
   var RATES_OURS = [
     {id:"apostilleCoord", label:"Apostille coordination", hint:"Per document · Itemised package, Hague country", value:79},
     {id:"authCoord", label:"Authentication coordination", hint:"Per document · Itemised package, non-Hague country", value:99},
-    {id:"notaryCoord", label:"Notary appointment coordination", hint:"Per document · Itemised package, when 'Notarise' is ticked", value:39},
+    {id:"notaryCoord", label:"Notary appointment coordination", hint:"Once per case · Itemised package, when any document has 'Notarise' ticked", value:39},
     {id:"translationCoord", label:"Translation coordination", hint:"Per document · Itemised package, when 'Translate' is ticked", value:39},
     {id:"courierCoord", label:"Courier & document return coordination", hint:"Per case · Itemised package, when any courier box is ticked", value:25},
     {id:"fullServicePkg", label:"Full-Service Document Handling", hint:"Flat, per case · when this package is selected", value:129},
@@ -958,7 +966,8 @@
     {id:"categoryA", label:"Category A authentication govt fee", hint:"Per document · non-Hague, Category A", value:74},
     {id:"categoryB", label:"Category B authentication govt fee", hint:"Per document · non-Hague, Category B", value:223},
     {id:"priority", label:"DIA urgent service surcharge", hint:"Per document · when 'Government urgent service' is ticked", value:120},
-    {id:"notary", label:"Notary Public fee", hint:"Per document · when 'Notarise' is ticked (estimate)", value:45},
+    {id:"notary", label:"Notary Public fee — first document", hint:"Incl. GST · first notarised document in the case (typically $150–170 + GST)", value:184},
+    {id:"notaryAdditional", label:"Notary Public fee — each additional document", hint:"Incl. GST · every further notarised document at the same appointment (typically $30–60 + GST)", value:52},
     {id:"translator", label:"Translator fee", hint:"Per document · when 'Translate' is ticked (estimate)", value:95},
     {id:"courierMetro", label:"Courier — metro NZ", hint:"Flat · when the Metro NZ courier box is ticked", value:7},
     {id:"courierRegional", label:"Courier — other NZ region", hint:"Flat · when the Other NZ region box is ticked", value:40},
@@ -1140,6 +1149,8 @@
   document.querySelectorAll('#courierLegs input').forEach(function(c){ c.addEventListener('change', recalc); });
   document.getElementById('servicePackage').addEventListener('change', recalc);
   document.getElementById('priorityAdminToggle').addEventListener('change', recalc);
+  document.getElementById('showSplit').addEventListener('change', recalc);
+
 
   /* ---------------- certificate ref ---------------- */
   var certRefEl = document.getElementById('certRef');
@@ -1190,59 +1201,76 @@
       if(qty > 0){ docRows.push({def:def, qty:qty, notarise:notarise, translate:translate, order:order}); }
     });
 
-    var oursLines = [], thirdLines = [];
-    var subOurs = 0, subThird = 0;
+    /* ---- combined lines: each line = our fee + third-party/government cost, shown as one price ---- */
+    var lines = [];
     var pathLabel = country.hague ? 'Apostille' : (authCategory === 'A' ? 'Category A authentication' : 'Category B authentication');
+    var itemised = servicePackage === 'individual';
+    function addLine(name, qty, sub, ours, third, govtWord){
+      lines.push({name:name, qty:qty, sub:sub, ours:ours||0, third:third||0, govtWord:govtWord||'third-party'});
+    }
 
     if(docRows.length > 0){
-      /* ---- our coordination fees ---- */
-      if(servicePackage === 'individual'){
-        docRows.forEach(function(r){
-          var coordFee = (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty;
-          oursLines.push({name:(country.hague ? L('apostilleCoord') : L('authCoord')) + ' — ' + r.def.label, qty:r.qty, sub:pathLabel, amount:coordFee});
-          if(r.notarise){ oursLines.push({name:L('notaryCoord') + ' — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('notaryCoord') * r.qty}); }
-          if(r.translate){ oursLines.push({name:L('translationCoord') + ' — ' + r.def.label, qty:r.qty, sub:'Per document', amount: rate('translationCoord') * r.qty}); }
-        });
-        if(courierLegs.length > 0){ oursLines.push({name:L('courierCoord'), qty:1, sub:'Per case', amount: rate('courierCoord')}); }
-      } else if(servicePackage === 'fullservice'){
-        oursLines.push({name:L('fullServicePkg'), qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('fullServicePkg')});
-      } else {
-        oursLines.push({name:L('intlPkg'), qty:1, sub:'Flat starting fee, replaces itemised coordination', amount: rate('intlPkg')});
+      if(servicePackage === 'fullservice'){
+        addLine(L('fullServicePkg'), 1, 'Flat starting fee — covers our coordination of every step', rate('fullServicePkg'), 0);
+      } else if(servicePackage !== 'individual'){
+        addLine(L('intlPkg'), 1, 'Flat starting fee — covers our coordination of every step', rate('intlPkg'), 0);
       }
-      if(priorityAdmin){ oursLines.push({name:L('priorityAdmin'), qty:1, sub:'Add-on — our admin only', amount: rate('priorityAdmin')}); }
 
-      /* ---- third-party & government pass-through ---- */
+      var notarisedSoFar = 0;
       docRows.forEach(function(r){
-        if(r.order){ thirdLines.push({name:L('certOrder') + ' — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: rate('certOrder') * r.qty}); }
+        var label = r.def.label;
+        if(r.order){ addLine('Certificate ordering — ' + label, r.qty, 'Certificate issued by DIA (BDM)', 0, rate('certOrder') * r.qty, 'DIA'); }
+        if(r.notarise){
+          /* the notary charges a higher fee for the first document and less for each further one at the same appointment */
+          var firstDocs = notarisedSoFar === 0 ? 1 : 0;
+          var notaryCost = firstDocs * rate('notary') + (r.qty - firstDocs) * rate('notaryAdditional');
+          /* our appointment coordination is charged once per case, on the first notarised line */
+          var apptFee = (itemised && firstDocs) ? rate('notaryCoord') : 0;
+          notarisedSoFar += r.qty;
+          addLine('Notary certification — ' + label, r.qty, 'New Zealand Notary Public, arranged by us',
+                  apptFee, notaryCost, 'notary');
+        }
+        if(r.translate){
+          addLine('Translation — ' + label, r.qty, 'Certified translation, arranged by us',
+                  itemised ? rate('translationCoord') * r.qty : 0, rate('translator') * r.qty, 'translator');
+        }
         var govtBase = country.hague ? rate('dia') : (authCategory === 'A' ? rate('categoryA') : rate('categoryB'));
-        thirdLines.push({name: (country.hague ? L('dia') : (authCategory === 'A' ? L('categoryA') : L('categoryB'))) + ' — ' + r.def.label, qty:r.qty, sub:'Est. govt fee', amount: govtBase * r.qty});
-        if(urgent){ thirdLines.push({name:L('priority') + ' — ' + r.def.label, qty:r.qty, sub:'5 working days', amount: rate('priority') * r.qty}); }
-        if(r.notarise){ thirdLines.push({name:L('notary') + ' — ' + r.def.label, qty:r.qty, sub:'Est., set by notary', amount: rate('notary') * r.qty}); }
-        if(r.translate){ thirdLines.push({name:L('translator') + ' — ' + r.def.label, qty:r.qty, sub:'Est., set by translator', amount: rate('translator') * r.qty}); }
+        var coord = itemised ? (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty : 0;
+        addLine(pathLabel + ' — ' + label, r.qty, country.hague ? 'Issued by DIA, lodged and tracked by us' : 'DIA, MFAT and embassy steps, coordinated by us',
+                coord, govtBase * r.qty, 'DIA');
+        if(urgent){ addLine('Urgent processing — ' + label, r.qty, 'DIA urgent service, 5 working days', 0, rate('priority') * r.qty, 'DIA'); }
       });
-      var COURIER_LEGS = {metro:['courierMetro','Courier — metro NZ'], regional:['courierRegional','Courier — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], international:['courierIntl','Courier — international']};
-      courierLegs.forEach(function(leg){
+
+      var COURIER_LEGS = {metro:['courierMetro','Courier & document return — metro NZ'], regional:['courierRegional','Courier & document return — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], international:['courierIntl','Courier & document return — international']};
+      courierLegs.forEach(function(leg, i){
         var c = COURIER_LEGS[leg];
-        if(c){ thirdLines.push({name:L(c[0]), qty:1, sub:'Est., pass-through', amount: rate(c[0])}); }
+        if(!c){ return; }
+        /* our handling fee is charged once per case, folded into the first courier line */
+        var handling = (itemised && i === 0) ? rate('courierCoord') : 0;
+        addLine(c[1], 1, 'Tracked courier, arranged by us', handling, rate(c[0]), 'courier');
       });
+
+      if(priorityAdmin){ addLine(L('priorityAdmin'), 1, 'Speeds up our admin only', rate('priorityAdmin'), 0); }
     }
 
     /* ---- lines added by hand with the "Add" tick boxes ---- */
-    function manualLines(rates, target){
+    function manualLines(rates, isOurs){
       rates.forEach(function(r){
         var cb = document.getElementById('add-'+r.id);
         if(cb && cb.checked){
           var q = parseInt(document.getElementById('addqty-'+r.id).value, 10) || 1;
-          target.push({name:L(r.id), qty:q, sub:'Added manually', amount: rate(r.id) * q});
+          var amt = rate(r.id) * q;
+          addLine(L(r.id), q, 'Additional item', isOurs ? amt : 0, isOurs ? 0 : amt);
         }
       });
     }
-    manualLines(RATES_OURS, oursLines);
-    manualLines(RATES_THIRDPARTY, thirdLines);
+    manualLines(RATES_OURS, true);
+    manualLines(RATES_THIRDPARTY, false);
 
-    oursLines.forEach(function(l){ subOurs += l.amount; });
-    thirdLines.forEach(function(l){ subThird += l.amount; });
+    var subOurs = 0, subThird = 0;
+    lines.forEach(function(l){ subOurs += l.ours; subThird += l.third; });
     var total = subOurs + subThird;
+    var showSplit = document.getElementById('showSplit') && document.getElementById('showSplit').checked;
 
     /* pathway text */
     var pathwayEl = document.getElementById('certPathway');
@@ -1261,35 +1289,31 @@
     var tbody = document.getElementById('certLines');
     tbody.innerHTML = '';
 
+    function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function lineRow(l){
+      var amount = l.ours + l.third;
+      var split = '';
+      if(showSplit && l.ours && l.third){ split = '<span class="cert-split"> · our ' + fmt.format(l.ours) + ' + ' + esc(l.govtWord) + ' ' + fmt.format(l.third) + '</span>'; }
+      else if(showSplit){ split = '<span class="cert-split"> · ' + (l.ours ? 'our fee' : esc(l.govtWord) + ' cost') + '</span>'; }
       var tr = document.createElement('tr');
       tr.innerHTML =
-        '<td><span class="cert-line-name">' + String(l.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + l.sub + '</span></td>' +
-        '<td>' + fmt.format(l.amount) + '</td>';
-      return tr;
-    }
-    function groupHeadRow(text){
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="2" style="padding-top:14px; font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); border-bottom:none; text-align:left; font-family:var(--font-body);">' + text + '</td>';
-      return tr;
-    }
-    function subtotalRow(text, amount){
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td style="font-weight:700; color:var(--ink);">' + text + '</td><td style="font-weight:700; color:var(--ink);">' + fmt.format(amount) + '</td>';
+        '<td><span class="cert-line-name">' + esc(l.name) + (l.qty > 1 ? ' × ' + l.qty : '') + '</span><br><span class="cert-line-sub">' + esc(l.sub) + split + '</span></td>' +
+        '<td>' + fmt.format(amount) + '</td>';
       return tr;
     }
 
-    if(docRows.length === 0 && oursLines.length === 0 && thirdLines.length === 0){
+    if(lines.length === 0){
       var emptyRow = document.createElement('tr');
       emptyRow.innerHTML = '<td colspan="2" style="color:var(--ink-faint);">Add a document line to see an estimate.</td>';
       tbody.appendChild(emptyRow);
     } else {
-      tbody.appendChild(groupHeadRow('Our coordination fees'));
-      oursLines.forEach(function(l){ tbody.appendChild(lineRow(l)); });
-      tbody.appendChild(subtotalRow('Our fees subtotal', subOurs));
-      tbody.appendChild(groupHeadRow('Estimated third-party & government costs'));
-      thirdLines.forEach(function(l){ tbody.appendChild(lineRow(l)); });
-      tbody.appendChild(subtotalRow('Third-party subtotal (est.)', subThird));
+      lines.forEach(function(l){ tbody.appendChild(lineRow(l)); });
+    }
+
+    var splitSummary = document.getElementById('splitSummary');
+    if(splitSummary){
+      splitSummary.style.display = showSplit && lines.length ? 'block' : 'none';
+      splitSummary.textContent = 'Staff only: our fees ' + fmt.format(subOurs) + ' · third-party & government ' + fmt.format(subThird);
     }
 
     document.getElementById('certTotal').textContent = fmt.format(total);
@@ -1300,6 +1324,23 @@
   addDocLine('academic', 1);
   destSelect.value = 'Australia';
   recalc();
+
+  /* ---- office-only fee split: tick box appears only on the office link (#office-nzda) ---- */
+  (function(){
+    var OFFICE_KEY = 'nzda-office-view';
+    function officeMode(){
+      if(location.hash === '#office-nzda'){ try { localStorage.setItem(OFFICE_KEY, '1'); } catch(e){} }
+      if(location.hash === '#client'){ try { localStorage.removeItem(OFFICE_KEY); } catch(e){} }
+      var on = false;
+      try { on = localStorage.getItem(OFFICE_KEY) === '1'; } catch(e){}
+      if(location.hash === '#office-nzda'){ on = true; }
+      document.getElementById('splitToggleWrap').style.display = on ? '' : 'none';
+      if(!on){ document.getElementById('showSplit').checked = false; }
+      recalc();
+    }
+    window.addEventListener('hashchange', officeMode);
+    officeMode();
+  })();
 
   /* ---------------- couriers ---------------- */
   var courierFilters = document.getElementById('courierFilters');
