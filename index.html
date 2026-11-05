@@ -231,10 +231,13 @@
 
   .doc-lines{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
   .doc-line{
-    display:grid; grid-template-columns:1.3fr .5fr .62fr .62fr .55fr auto; gap:10px; align-items:center;
+    display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center;
     padding:10px; background:var(--paper); border:1px solid var(--line-soft); border-radius:var(--radius);
   }
   .doc-line label.toggle{ font-size:.76rem; }
+  .doc-line select{ flex:1 1 60%; min-width:0; }
+  .doc-line input[type="number"]{ flex:0 0 72px; width:72px; }
+  .doc-line .icon-btn{ margin-left:auto; }
   .icon-btn{
     background:none; border:1px solid var(--line); border-radius:var(--radius); cursor:pointer;
     width:30px; height:30px; display:flex; align-items:center; justify-content:center; color:var(--ink-faint);
@@ -537,7 +540,9 @@
                 <label class="toggle"><input type="checkbox" value="metro"> Metro NZ (Auckland / Wellington / Christchurch)</label>
                 <label class="toggle"><input type="checkbox" value="regional"> Other NZ region</label>
                 <label class="toggle"><input type="checkbox" value="embassy"> Wellington embassy drop-off</label>
-                <label class="toggle"><input type="checkbox" value="international"> International</label>
+                <label class="toggle"><input type="checkbox" value="australia"> Australia</label>
+                <label class="toggle"><input type="checkbox" value="uk"> United Kingdom</label>
+                <label class="toggle"><input type="checkbox" value="international"> Other overseas</label>
               </div>
               <span class="hint" style="margin:4px 0 0;">Leave all unticked if the client handles delivery.</span>
             </div>
@@ -582,7 +587,7 @@
 
         <div class="panel">
           <h3>Documents</h3>
-          <span class="hint">Add one line per document type. Tick notarise for documents needing a New Zealand Notary Public first — a JP or solicitor's certification isn't accepted. Tick translate if the document needs a translation. Tick order if we order the certificate from DIA (BDM) for the client.</span>
+          <span class="hint">Add one line per document type. Tick notarise for documents needing a New Zealand Notary Public first — a JP or solicitor's certification isn't accepted. Tick No apostille for a certificate or criminal record on its own. Tick translate if the document needs a translation. Tick order if we order the certificate from DIA (BDM) for the client.</span>
           <div class="doc-lines" id="docLines"></div>
           <button class="add-line" id="addDocLine" type="button">+ Add document line</button>
         </div>
@@ -947,13 +952,20 @@
     {id:"other", label:"Other document", notariseDefault:true}
   ];
 
-  /* Our own coordination fees (incl. GST) — defaults match nzdocumentassist.co.nz/pricing/ (checked 12 Sep 2026) */
+  /* Our own coordination fees (incl. GST) — defaults match nzdocumentassist.co.nz/pricing/ (checked 5 Nov 2026) */
   var RATES_OURS = [
     {id:"apostilleCoord", label:"Apostille coordination", hint:"Per document · Itemised package, Hague country", value:79},
     {id:"authCoord", label:"Authentication coordination", hint:"Per document · Itemised package, non-Hague country", value:99},
     {id:"notaryCoord", label:"Notary appointment coordination", hint:"Once per case · Itemised package, when any document has 'Notarise' ticked", value:39},
     {id:"translationCoord", label:"Translation coordination", hint:"Per document · Itemised package, when 'Translate' is ticked", value:39},
     {id:"courierCoord", label:"Courier & document return coordination", hint:"Per case · Itemised package, when any courier box is ticked", value:25},
+    {id:"certOrderCoord", label:"Certificate ordering", hint:"Per certificate · Itemised package, when 'Order' is ticked on a birth, marriage or death certificate. With the certificate fee this is the NZ$50 add-on", value:15},
+    {id:"urgentCoord", label:"Urgent service coordination", hint:"Once per job · Itemised package, when 'Government urgent service' is ticked. With the DIA fee on one document this is the NZ$169 urgent price", value:49},
+    {id:"certOnlyCoord", label:"Certificate only, no apostille", hint:"Per certificate · when 'No apostille' is ticked. With the certificate fee this is the NZ$79 price", value:44},
+    {id:"certOnlyAU", label:"Certificate only, Australia handling", hint:"Per case · 'No apostille' with the Australia courier box. Makes the NZ$129 price", value:24},
+    {id:"certOnlyUK", label:"Certificate only, UK handling", hint:"Per case · 'No apostille' with the United Kingdom courier box. Makes the NZ$169 price", value:37},
+    {id:"certOnlyOther", label:"Certificate only, other overseas handling", hint:"Per case · 'No apostille' with the Other overseas courier box", value:37},
+    {id:"criminalCheck", label:"Criminal record check", hint:"Per request · when 'Order' is ticked on a criminal record line. NZ$35 all in", value:35},
     {id:"fullServicePkg", label:"Full-Service Document Handling", hint:"Flat, per case · when this package is selected", value:129},
     {id:"intlPkg", label:"Complex/International Multi-Step Case", hint:"Flat, per case · when this package is selected", value:179},
     {id:"priorityAdmin", label:"Priority administration", hint:"Per case · when 'Priority administration' is ticked", value:50}
@@ -972,7 +984,9 @@
     {id:"courierMetro", label:"Courier — metro NZ", hint:"Flat · when the Metro NZ courier box is ticked", value:7},
     {id:"courierRegional", label:"Courier — other NZ region", hint:"Flat · when the Other NZ region box is ticked", value:40},
     {id:"courierEmbassy", label:"Courier — Wellington embassy drop-off", hint:"Flat · when the embassy drop-off box is ticked", value:55},
-    {id:"courierIntl", label:"Courier — international", hint:"Flat · when the International box is ticked", value:62}
+    {id:"courierAU", label:"Courier — Australia", hint:"Flat · when the Australia box is ticked", value:26},
+    {id:"courierUK", label:"Courier — United Kingdom", hint:"Flat · when the United Kingdom box is ticked", value:53},
+    {id:"courierIntl", label:"Courier — other overseas", hint:"Flat · when the Other overseas box is ticked", value:62}
   ];
 
   var COURIERS = [
@@ -1059,6 +1073,8 @@
   function L(id){ var b = document.getElementById('label-'+id); return (b && b.value.trim()) || (b && b.dataset.orig) || id; }
 
   /* ---------------- document lines ---------------- */
+  var BDM_TYPES = ['birth', 'marriage', 'death'];
+  var NO_APOSTILLE_TYPES = BDM_TYPES.concat(['criminal']);
   var docLinesEl = document.getElementById('docLines');
   var lineCount = 0;
 
@@ -1103,15 +1119,36 @@
     orderLabel.appendChild(orderCheck);
     orderLabel.appendChild(document.createTextNode(' Order'));
 
+    var noApostilleLabel = document.createElement('label');
+    noApostilleLabel.className = 'toggle';
+    noApostilleLabel.title = 'Order the certificate or record on its own, with no apostille or authentication';
+    var noApostilleCheck = document.createElement('input');
+    noApostilleCheck.type = 'checkbox';
+    noApostilleLabel.appendChild(noApostilleCheck);
+    noApostilleLabel.appendChild(document.createTextNode(' No apostille'));
+    function syncNoApostille(){
+      var allowed = NO_APOSTILLE_TYPES.indexOf(typeSelect.value) !== -1;
+      noApostilleLabel.style.display = allowed ? '' : 'none';
+      if(!allowed){ noApostilleCheck.checked = false; }
+    }
+    noApostilleCheck.addEventListener('change', function(){
+      if(noApostilleCheck.checked){ orderCheck.checked = true; notariseCheck.checked = false; translateCheck.checked = false; }
+      recalc();
+    });
+
     typeSelect.addEventListener('change', function(){
       var def = DOC_TYPES.find(function(d){ return d.id === typeSelect.value; });
       notariseCheck.checked = def ? def.notariseDefault : false;
+      syncNoApostille();
       recalc();
     });
     qtyInput.addEventListener('input', recalc);
     notariseCheck.addEventListener('change', recalc);
     translateCheck.addEventListener('change', recalc);
-    orderCheck.addEventListener('change', recalc);
+    orderCheck.addEventListener('change', function(){
+      if(!orderCheck.checked){ noApostilleCheck.checked = false; }
+      recalc();
+    });
 
     var removeBtn = document.createElement('button');
     removeBtn.className = 'icon-btn'; removeBtn.type = 'button'; removeBtn.title = 'Remove line';
@@ -1126,7 +1163,9 @@
     row.appendChild(notariseLabel);
     row.appendChild(translateLabel);
     row.appendChild(orderLabel);
+    row.appendChild(noApostilleLabel);
     row.appendChild(removeBtn);
+    syncNoApostille();
     docLinesEl.appendChild(row);
     recalc();
   }
@@ -1197,9 +1236,12 @@
       var notarise = inputs[1].checked;
       var translate = inputs[2].checked;
       var order = inputs[3] ? inputs[3].checked : false;
+      var noApostille = inputs[4] ? inputs[4].checked : false;
       var def = DOC_TYPES.find(function(d){ return d.id === typeId; });
-      if(qty > 0){ docRows.push({def:def, qty:qty, notarise:notarise, translate:translate, order:order}); }
+      if(qty > 0){ docRows.push({def:def, qty:qty, notarise:notarise, translate:translate, order:order, noApostille:noApostille}); }
     });
+
+    var allNoApostille = docRows.length > 0 && docRows.every(function(r){ return r.noApostille; });
 
     /* ---- combined lines: each line = our fee + third-party/government cost, shown as one price ---- */
     var lines = [];
@@ -1217,9 +1259,26 @@
       }
 
       var notarisedSoFar = 0;
+      var urgentCoordCharged = false;
       docRows.forEach(function(r){
         var label = r.def.label;
-        if(r.order){ addLine('Certificate ordering — ' + label, r.qty, 'Certificate issued by DIA (BDM)', 0, rate('certOrder') * r.qty, 'DIA'); }
+        var isCriminal = r.def.id === 'criminal';
+        var isBdm = BDM_TYPES.indexOf(r.def.id) !== -1;
+        if(r.noApostille){
+          if(isCriminal){
+            addLine('Criminal record check', r.qty, 'Ministry of Justice record, requested for you and emailed', rate('criminalCheck') * r.qty, 0);
+          } else {
+            addLine('Official certificate — ' + label, r.qty, 'Ordered for you from Births, Deaths and Marriages', rate('certOnlyCoord') * r.qty, rate('certOrder') * r.qty, 'BDM');
+          }
+          return;
+        }
+        if(r.order){
+          if(isCriminal){
+            addLine('Criminal record check', r.qty, 'Ministry of Justice record, requested for you', rate('criminalCheck') * r.qty, 0);
+          } else {
+            addLine('Certificate ordering — ' + label, r.qty, 'Certificate issued by DIA (BDM)', (itemised && isBdm) ? rate('certOrderCoord') * r.qty : 0, rate('certOrder') * r.qty, 'DIA');
+          }
+        }
         if(r.notarise){
           /* the notary charges a higher fee for the first document and less for each further one at the same appointment */
           var firstDocs = notarisedSoFar === 0 ? 1 : 0;
@@ -1238,15 +1297,25 @@
         var coord = itemised ? (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty : 0;
         addLine(pathLabel + ' — ' + label, r.qty, country.hague ? 'Issued by DIA, lodged and tracked by us' : 'DIA, MFAT and embassy steps, coordinated by us',
                 coord, govtBase * r.qty, 'DIA');
-        if(urgent){ addLine('Urgent processing — ' + label, r.qty, 'DIA urgent service, 5 working days', 0, rate('priority') * r.qty, 'DIA'); }
+        if(urgent){
+          var urgentFee = (itemised && !urgentCoordCharged) ? rate('urgentCoord') : 0;
+          urgentCoordCharged = true;
+          addLine('Urgent processing — ' + label, r.qty, 'DIA urgent service, 5 working days', urgentFee, rate('priority') * r.qty, 'DIA');
+        }
       });
 
-      var COURIER_LEGS = {metro:['courierMetro','Courier & document return — metro NZ'], regional:['courierRegional','Courier & document return — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], international:['courierIntl','Courier & document return — international']};
+      var COURIER_LEGS = {metro:['courierMetro','Courier & document return — metro NZ'], regional:['courierRegional','Courier & document return — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], australia:['courierAU','Tracked courier — Australia'], uk:['courierUK','Tracked courier — United Kingdom'], international:['courierIntl','Tracked courier — overseas']};
+      var CERT_ONLY_LEGS = {australia:['certOnlyAU','Overseas delivery and handling — Australia'], uk:['certOnlyUK','Overseas delivery and handling — United Kingdom'], international:['certOnlyOther','Overseas delivery and handling']};
       courierLegs.forEach(function(leg, i){
         var c = COURIER_LEGS[leg];
         if(!c){ return; }
         /* our handling fee is charged once per case, folded into the first courier line */
         var handling = (itemised && i === 0) ? rate('courierCoord') : 0;
+        var certOnlyLeg = allNoApostille ? CERT_ONLY_LEGS[leg] : null;
+        if(certOnlyLeg){
+          addLine(certOnlyLeg[1], 1, 'Tracked courier, arranged by us', i === 0 ? rate(certOnlyLeg[0]) : 0, rate(c[0]), 'courier');
+          return;
+        }
         addLine(c[1], 1, 'Tracked courier, arranged by us', handling, rate(c[0]), 'courier');
       });
 
@@ -1274,7 +1343,10 @@
 
     /* pathway text */
     var pathwayEl = document.getElementById('certPathway');
-    if(country.hague){
+    if(allNoApostille){
+      pathwayEl.innerHTML = '<b>No apostille on this estimate.</b> We order the official document for you and deliver it.';
+      pathwayEl.style.borderLeft = '3px solid var(--good)';
+    } else if(country.hague){
       pathwayEl.innerHTML = '<b>Pathway: Apostille (Hague Convention).</b> ' + country.name + ' is shown as a Convention member — DIA issues the apostille directly; standard service is 15 working days, urgent is 5.';
       pathwayEl.style.borderLeft = '3px solid var(--good)';
     } else if(authCategory === 'A'){
