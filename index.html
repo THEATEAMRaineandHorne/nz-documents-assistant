@@ -960,7 +960,7 @@
     {id:"translationCoord", label:"Translation coordination", hint:"Per document · Itemised package, when 'Translate' is ticked", value:39},
     {id:"courierCoord", label:"Courier & document return coordination", hint:"Per case · Itemised package, when any courier box is ticked", value:25},
     {id:"certOrderCoord", label:"Certificate ordering", hint:"Per certificate · Itemised package, when 'Order' is ticked on a birth, marriage or death certificate. With the certificate fee this is the NZ$50 add-on", value:15},
-    {id:"urgentCoord", label:"Urgent service coordination", hint:"Once per job · Itemised package, when 'Government urgent service' is ticked. With the DIA fee on one document this is the NZ$169 urgent price", value:49},
+    {id:"urgentCoord", label:"Urgent service coordination", hint:"Once per job · Itemised package, when 'Government urgent service' is ticked. With the DIA fee this is the NZ$169 urgent price", value:49},
     {id:"certOnlyCoord", label:"Certificate only, no apostille", hint:"Per certificate · when 'No apostille' is ticked. With the certificate fee this is the NZ$79 price", value:44},
     {id:"certOnlyAU", label:"Certificate only, Australia handling", hint:"Per case · 'No apostille' with the Australia courier box. Makes the NZ$129 price", value:24},
     {id:"certOnlyUK", label:"Certificate only, UK handling", hint:"Per case · 'No apostille' with the United Kingdom courier box. Makes the NZ$169 price", value:37},
@@ -977,7 +977,7 @@
     {id:"dia", label:"Apostille govt fee (DIA)", hint:"Per document · Hague countries", value:37},
     {id:"categoryA", label:"Category A authentication govt fee", hint:"Per document · non-Hague, Category A", value:74},
     {id:"categoryB", label:"Category B authentication govt fee", hint:"Per document · non-Hague, Category B", value:223},
-    {id:"priority", label:"DIA urgent service surcharge", hint:"Per document · when 'Government urgent service' is ticked", value:120},
+    {id:"priority", label:"DIA urgent service surcharge", hint:"Per 5 documents · when 'Government urgent service' is ticked. DIA's fee covers up to 5 documents", value:120},
     {id:"notary", label:"Notary Public fee — first document", hint:"Incl. GST · first notarised document in the case (typically $150–170 + GST)", value:184},
     {id:"notaryAdditional", label:"Notary Public fee — each additional document", hint:"Incl. GST · every further notarised document at the same appointment (typically $30–60 + GST)", value:52},
     {id:"translator", label:"Translator fee", hint:"Per document · when 'Translate' is ticked (estimate)", value:95},
@@ -1259,7 +1259,7 @@
       }
 
       var notarisedSoFar = 0;
-      var urgentCoordCharged = false;
+      var urgentDocs = 0;
       docRows.forEach(function(r){
         var label = r.def.label;
         var isCriminal = r.def.id === 'criminal';
@@ -1297,12 +1297,12 @@
         var coord = itemised ? (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty : 0;
         addLine(pathLabel + ' — ' + label, r.qty, country.hague ? 'Issued by DIA, lodged and tracked by us' : 'DIA, MFAT and embassy steps, coordinated by us',
                 coord, govtBase * r.qty, 'DIA');
-        if(urgent){
-          var urgentFee = (itemised && !urgentCoordCharged) ? rate('urgentCoord') : 0;
-          urgentCoordCharged = true;
-          addLine('Urgent processing — ' + label, r.qty, 'DIA urgent service, 5 working days', urgentFee, rate('priority') * r.qty, 'DIA');
-        }
+        urgentDocs += r.qty;
       });
+
+      if(urgent && urgentDocs > 0){
+        addLine('Urgent processing', 1, 'DIA urgent service, 5 working days', itemised ? rate('urgentCoord') : 0, rate('priority') * Math.ceil(urgentDocs / 5), 'DIA');
+      }
 
       var COURIER_LEGS = {metro:['courierMetro','Courier & document return — metro NZ'], regional:['courierRegional','Courier & document return — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], australia:['courierAU','Tracked courier — Australia'], uk:['courierUK','Tracked courier — United Kingdom'], international:['courierIntl','Tracked courier — overseas']};
       var CERT_ONLY_LEGS = {australia:['certOnlyAU','Overseas delivery and handling — Australia'], uk:['certOnlyUK','Overseas delivery and handling — United Kingdom'], international:['certOnlyOther','Overseas delivery and handling']};
