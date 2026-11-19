@@ -214,6 +214,8 @@
   .panel + .panel{ margin-top:20px; }
   .panel h3{ font-size:1.05rem; margin-bottom:4px; }
   .panel .hint{ font-size:.8rem; color:var(--ink-faint); margin-bottom:18px; display:block; }
+  .translation-note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--ink-faint); background:rgba(127,127,127,.07); border-radius:6px; font-size:.82rem; line-height:1.55; }
+  .translation-note p + p{ margin-top:6px; }
 
   .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
   .field{ display:flex; flex-direction:column; gap:6px; }
@@ -590,6 +592,11 @@
           <span class="hint">Add one line per document type. Tick notarise for documents needing a New Zealand Notary Public first — a JP or solicitor's certification isn't accepted. Tick No apostille for a certificate or criminal record on its own. Tick translate if the document needs a translation. Tick order if we order the certificate from DIA (BDM) for the client.</span>
           <div class="doc-lines" id="docLines"></div>
           <button class="add-line" id="addDocLine" type="button">+ Add document line</button>
+          <div class="translation-note">
+            <p><strong>Translation of documents without a standard layout</strong></p>
+            <p>Contracts, transcripts, letters and similar documents vary in length and layout, so we price them by word count. Most fall between NZ$18.30 and NZ$24.50 per 100 words. The final rate depends on how complex the text is and how soon you need it.</p>
+            <p>Send us a copy for a free, no-obligation quote. Anything you share stays confidential and is used only to prepare your quote. Without seeing the document, we can only give a rough figure.</p>
+          </div>
         </div>
 
         <div class="panel">
@@ -939,17 +946,20 @@
   ];
 
   var DOC_TYPES = [
-    {id:"birth", label:"Birth certificate", notariseDefault:false},
-    {id:"marriage", label:"Marriage certificate", notariseDefault:false},
-    {id:"death", label:"Death certificate", notariseDefault:false},
-    {id:"police", label:"Police vetting result", notariseDefault:false},
-    {id:"criminal", label:"Criminal record (Ministry of Justice)", notariseDefault:false},
-    {id:"nocheck", label:"Certificate of no impediment", notariseDefault:false},
-    {id:"academic", label:"Academic transcript / degree", notariseDefault:true},
-    {id:"poa", label:"Power of attorney", notariseDefault:true},
-    {id:"statdec", label:"Statutory declaration", notariseDefault:true},
-    {id:"company", label:"Company / business document", notariseDefault:true},
-    {id:"other", label:"Other document", notariseDefault:true}
+    /* translateRate = which translator fee (third-party table) applies when 'Translate' is ticked */
+    {id:"birth", label:"Birth certificate", notariseDefault:false, translateRate:"translatorStd"},
+    {id:"marriage", label:"Marriage certificate", notariseDefault:false, translateRate:"translatorStd"},
+    {id:"death", label:"Death certificate", notariseDefault:false, translateRate:"translatorStd"},
+    {id:"police", label:"Police vetting result", notariseDefault:false, translateRate:"translatorShort"},
+    {id:"criminal", label:"Criminal record (Ministry of Justice)", notariseDefault:false, translateRate:"translatorShort"},
+    {id:"nocheck", label:"Certificate of no impediment", notariseDefault:false, translateRate:"translatorShort"},
+    {id:"citizenship", label:"Citizenship certificate", notariseDefault:false, translateRate:"translatorShort"},
+    {id:"passport", label:"Passport", notariseDefault:true, translateRate:"translatorPassport"},
+    {id:"academic", label:"Academic transcript / degree", notariseDefault:true, translateRate:"translator"},
+    {id:"poa", label:"Power of attorney", notariseDefault:true, translateRate:"translator"},
+    {id:"statdec", label:"Statutory declaration", notariseDefault:true, translateRate:"translator"},
+    {id:"company", label:"Company / business document", notariseDefault:true, translateRate:"translator"},
+    {id:"other", label:"Other document", notariseDefault:true, translateRate:"translator"}
   ];
 
   /* Our own coordination fees (incl. GST) — defaults match nzdocumentassist.co.nz/pricing/ (checked 5 Nov 2026) */
@@ -957,7 +967,6 @@
     {id:"apostilleCoord", label:"Apostille coordination", hint:"Per document · Itemised package, Hague country", value:79},
     {id:"authCoord", label:"Authentication coordination", hint:"Per document · Itemised package, non-Hague country", value:99},
     {id:"notaryCoord", label:"Notary appointment coordination", hint:"Once per case · Itemised package, when any document has 'Notarise' ticked", value:39},
-    {id:"translationCoord", label:"Translation coordination", hint:"Per document · Itemised package, when 'Translate' is ticked", value:39},
     {id:"courierCoord", label:"Courier & document return coordination", hint:"Per case · Itemised package, when any courier box is ticked", value:25},
     {id:"certOrderCoord", label:"Certificate ordering", hint:"Per certificate · Itemised package, when 'Order' is ticked on a birth, marriage or death certificate. With the certificate fee this is the NZ$50 add-on", value:15},
     {id:"urgentCoord", label:"Urgent service coordination", hint:"Once per job · Itemised package, when 'Government urgent service' is ticked. With the DIA fee this is the NZ$169 urgent price", value:49},
@@ -980,7 +989,10 @@
     {id:"priority", label:"DIA urgent service surcharge", hint:"Per 5 documents · when 'Government urgent service' is ticked. DIA's fee covers up to 5 documents", value:120},
     {id:"notary", label:"Notary Public fee — first document", hint:"Incl. GST · first notarised document in the case (typically $150–170 + GST)", value:184},
     {id:"notaryAdditional", label:"Notary Public fee — each additional document", hint:"Incl. GST · every further notarised document at the same appointment (typically $30–60 + GST)", value:52},
-    {id:"translator", label:"Translator fee", hint:"Per document · when 'Translate' is ticked (estimate)", value:95},
+    {id:"translatorStd", label:"Translator fee — birth, marriage or death certificate", hint:"Per document · when 'Translate' is ticked on a birth, marriage or death certificate", value:82.50},
+    {id:"translatorShort", label:"Translator fee — single status, police, criminal record or citizenship", hint:"Per document · when 'Translate' is ticked on a certificate of no impediment, police vetting result, criminal record or citizenship certificate", value:63.00},
+    {id:"translatorPassport", label:"Translator fee — passport", hint:"Per document · when 'Translate' is ticked on a passport", value:43.50},
+    {id:"translator", label:"Translator fee — other documents (estimate)", hint:"Per document · non-standard documents are priced by length, usually NZ$18.30–24.50 per 100 words. Quote first, then update this figure", value:95},
     {id:"courierMetro", label:"Courier — metro NZ", hint:"Flat · when the Metro NZ courier box is ticked", value:7},
     {id:"courierRegional", label:"Courier — other NZ region", hint:"Flat · when the Other NZ region box is ticked", value:40},
     {id:"courierEmbassy", label:"Courier — Wellington embassy drop-off", hint:"Flat · when the embassy drop-off box is ticked", value:55},
@@ -1009,7 +1021,7 @@
     {title:"Documents that usually don't need notarising", body:"NZ government-issued originals — birth, marriage and death certificates, and police vetting results issued directly by the agency — generally go straight to DIA authentication without notarisation."},
     {title:"Standard vs urgent service", body:"Standard service is 15 working days. Urgent service is 5 working days for an extra fee ($120 published), but is only offered for apostilles and Category A — not Category B."},
     {title:"DIA's own courier costs", body:"Separate from our own courier coordination fee: DIA charges around $5.30 to courier documents back within NZ, and roughly $22–$64 internationally depending on the destination region."},
-    {title:"How our pricing is structured", body:"Our coordination fees (apostille or authentication coordination, notary and translation coordination, courier coordination — all GST-inclusive) cover our own work. Government, Notary Public, translator and courier costs are separate, at cost, and not ours to set."},
+    {title:"How our pricing is structured", body:"Our coordination fees (apostille or authentication coordination, notary coordination, courier coordination — all GST-inclusive) cover our own work. Government, Notary Public, translator and courier costs are separate, at cost, and not ours to set."},
     {title:"Sources & verification", body:"Coordination fee defaults are drawn from nzdocumentassist.co.nz/pricing/, last checked 12 Sep 2026. Government and Convention figures are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table, checked 10 Sep 2026. Fees, categories and Convention membership change, so confirm current figures before quoting a client."}
   ];
 
@@ -1052,7 +1064,7 @@
       wrap.appendChild(labelBox);
       if(r.hint){ var h = document.createElement('span'); h.className = 'rate-hint'; h.textContent = r.hint; wrap.appendChild(h); }
       var input = document.createElement('input');
-      input.type = 'number'; input.id = 'rate-'+r.id; input.value = r.value; input.min = 0; input.step = 1;
+      input.type = 'number'; input.id = 'rate-'+r.id; input.value = (r.value % 1 ? r.value.toFixed(2) : r.value); input.min = 0; input.step = 'any';
       input.setAttribute('aria-label', r.label + ' (NZD)');
       input.addEventListener('input', recalc);
       var add = document.createElement('div'); add.className = 'rate-add';
@@ -1291,7 +1303,7 @@
         }
         if(r.translate){
           addLine('Translation — ' + label, r.qty, 'Certified translation, arranged by us',
-                  itemised ? rate('translationCoord') * r.qty : 0, rate('translator') * r.qty, 'translator');
+                  0, rate(r.def.translateRate || 'translator') * r.qty, 'translator');
         }
         var govtBase = country.hague ? rate('dia') : (authCategory === 'A' ? rate('categoryA') : rate('categoryB'));
         var coord = itemised ? (country.hague ? rate('apostilleCoord') : rate('authCoord')) * r.qty : 0;
