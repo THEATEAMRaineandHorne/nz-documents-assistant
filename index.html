@@ -230,6 +230,8 @@
   .toggle-row{ display:flex; gap:18px; flex-wrap:wrap; margin-bottom:16px; }
   .toggle{ display:flex; align-items:center; gap:8px; font-size:.85rem; color:var(--ink-soft); cursor:pointer; }
   .toggle input{ accent-color:var(--ink); width:16px; height:16px; }
+  #courierLegs .toggle{ align-items:flex-start; line-height:1.35; }
+  #courierLegs .toggle input{ flex:none; margin-top:1px; }
 
   .doc-lines{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
   .doc-line{
@@ -543,10 +545,15 @@
                 <label class="toggle"><input type="checkbox" value="regional"> Other NZ region</label>
                 <label class="toggle"><input type="checkbox" value="embassy"> Wellington embassy drop-off</label>
                 <label class="toggle"><input type="checkbox" value="australia"> Australia</label>
+                <label class="toggle"><input type="checkbox" value="asiapacific"> Asia Pacific</label>
                 <label class="toggle"><input type="checkbox" value="uk"> United Kingdom</label>
-                <label class="toggle"><input type="checkbox" value="international"> Other overseas</label>
+                <label class="toggle"><input type="checkbox" value="usa"> USA</label>
+                <label class="toggle"><input type="checkbox" value="europe"> Europe (countries not listed below)</label>
+                <label class="toggle"><input type="checkbox" value="europehigh"> Bulgaria, Bosnia-Herzegovina, Cyprus, Croatia, Greece, Libya, North Macedonia, Malta, Pakistan, Switzerland, Serbia, Ukraine</label>
+                <label class="toggle"><input type="checkbox" value="mfat"> Russia, Iran, Belarus (delivery via MFAT post)</label>
+                <label class="toggle"><input type="checkbox" value="international"> Rest of world</label>
               </div>
-              <span class="hint" style="margin:4px 0 0;">Leave all unticked if the client handles delivery.</span>
+              <span class="hint" style="margin:4px 0 0;">Tick the zone of the client's delivery address, which may differ from the destination country. Leave all unticked if the client handles delivery.</span>
             </div>
           </div>
 
@@ -996,9 +1003,14 @@
     {id:"courierMetro", label:"Courier — metro NZ", hint:"Flat · when the Metro NZ courier box is ticked", value:7},
     {id:"courierRegional", label:"Courier — other NZ region", hint:"Flat · when the Other NZ region box is ticked", value:40},
     {id:"courierEmbassy", label:"Courier — Wellington embassy drop-off", hint:"Flat · when the embassy drop-off box is ticked", value:55},
-    {id:"courierAU", label:"Courier — Australia", hint:"Flat · when the Australia box is ticked", value:26},
-    {id:"courierUK", label:"Courier — United Kingdom", hint:"Flat · when the United Kingdom box is ticked", value:53},
-    {id:"courierIntl", label:"Courier — other overseas", hint:"Flat · when the Other overseas box is ticked", value:62}
+    {id:"courierAU", label:"Courier — Australia", hint:"Flat · DIA courier fee · when the Australia box is ticked", value:26},
+    {id:"courierAP", label:"Courier — Asia Pacific", hint:"Flat · DIA courier fee · when the Asia Pacific box is ticked", value:36},
+    {id:"courierUK", label:"Courier — United Kingdom", hint:"Flat · DIA courier fee · when the United Kingdom box is ticked", value:53},
+    {id:"courierUSA", label:"Courier — USA", hint:"Flat · DIA courier fee · when the USA box is ticked", value:50},
+    {id:"courierEU", label:"Courier — Europe", hint:"Flat · DIA courier fee · when the Europe box is ticked (European countries not on the higher-rate list)", value:54},
+    {id:"courierEUHigh", label:"Courier — Bulgaria, Bosnia-Herzegovina, Cyprus, Croatia, Greece, Libya, North Macedonia, Malta, Pakistan, Switzerland, Serbia, Ukraine", hint:"Flat · DIA courier fee · when the Bulgaria / Croatia / Serbia … box is ticked", value:68},
+    {id:"courierMFAT", label:"Delivery via MFAT post — Russia, Iran, Belarus", hint:"Flat · DIA fee · when the Russia, Iran, Belarus box is ticked", value:64},
+    {id:"courierIntl", label:"Courier — rest of world", hint:"Flat · DIA courier fee · when the Rest of world box is ticked", value:62}
   ];
 
   var COURIERS = [
@@ -1020,7 +1032,7 @@
     {title:"Notarisation rules", body:"DIA only accepts certification from a New Zealand Notary Public — a Justice of the Peace or solicitor's certification will be rejected. The notary must include their name, signature, seal or stamp, and the date."},
     {title:"Documents that usually don't need notarising", body:"NZ government-issued originals — birth, marriage and death certificates, and police vetting results issued directly by the agency — generally go straight to DIA authentication without notarisation."},
     {title:"Standard vs urgent service", body:"Standard service is 15 working days. Urgent service is 5 working days for an extra fee ($120 published), but is only offered for apostilles and Category A — not Category B."},
-    {title:"DIA's own courier costs", body:"Separate from our own courier coordination fee: DIA charges around $5.30 to courier documents back within NZ, and roughly $22–$64 internationally depending on the destination region."},
+    {title:"DIA's own courier costs", body:"Separate from our own courier coordination fee: DIA charges $7 to courier documents back within NZ. Overseas: Australia $26, Asia Pacific $36, USA $50, United Kingdom $53, Europe $54, rest of world $62, Russia, Iran and Belarus $64 (via MFAT post), and $68 for Bulgaria, Bosnia-Herzegovina, Cyprus, Croatia, Greece, Libya, North Macedonia, Malta, Pakistan, Switzerland, Serbia and Ukraine. DIA does not send by standard post. Checked 23 Nov 2026."},
     {title:"How our pricing is structured", body:"Our coordination fees (apostille or authentication coordination, notary coordination, courier coordination — all GST-inclusive) cover our own work. Government, Notary Public, translator and courier costs are separate, at cost, and not ours to set."},
     {title:"Sources & verification", body:"Coordination fee defaults are drawn from nzdocumentassist.co.nz/pricing/, last checked 12 Sep 2026. Government and Convention figures are drawn from dia.govt.nz, govt.nz and the HCCH apostille status table, checked 10 Sep 2026. Fees, categories and Convention membership change, so confirm current figures before quoting a client."}
   ];
@@ -1316,8 +1328,8 @@
         addLine('Urgent processing', 1, 'DIA urgent service, 5 working days', itemised ? rate('urgentCoord') : 0, rate('priority') * Math.ceil(urgentDocs / 5), 'DIA');
       }
 
-      var COURIER_LEGS = {metro:['courierMetro','Courier & document return — metro NZ'], regional:['courierRegional','Courier & document return — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], australia:['courierAU','Tracked courier — Australia'], uk:['courierUK','Tracked courier — United Kingdom'], international:['courierIntl','Tracked courier — overseas']};
-      var CERT_ONLY_LEGS = {australia:['certOnlyAU','Overseas delivery and handling — Australia'], uk:['certOnlyUK','Overseas delivery and handling — United Kingdom'], international:['certOnlyOther','Overseas delivery and handling']};
+      var COURIER_LEGS = {metro:['courierMetro','Courier & document return — metro NZ'], regional:['courierRegional','Courier & document return — other NZ region'], embassy:['courierEmbassy','Courier — Wellington embassy drop-off'], australia:['courierAU','Tracked courier — Australia'], asiapacific:['courierAP','Tracked courier — Asia Pacific'], uk:['courierUK','Tracked courier — United Kingdom'], usa:['courierUSA','Tracked courier — United States'], europe:['courierEU','Tracked courier — Europe'], europehigh:['courierEUHigh','Tracked courier — overseas'], mfat:['courierMFAT','Overseas delivery via MFAT post'], international:['courierIntl','Tracked courier — overseas']};
+      var CERT_ONLY_LEGS = {australia:['certOnlyAU','Overseas delivery and handling — Australia'], asiapacific:['certOnlyOther','Overseas delivery and handling — Asia Pacific'], uk:['certOnlyUK','Overseas delivery and handling — United Kingdom'], usa:['certOnlyOther','Overseas delivery and handling — United States'], europe:['certOnlyOther','Overseas delivery and handling — Europe'], europehigh:['certOnlyOther','Overseas delivery and handling'], mfat:['certOnlyOther','Overseas delivery and handling'], international:['certOnlyOther','Overseas delivery and handling']};
       courierLegs.forEach(function(leg, i){
         var c = COURIER_LEGS[leg];
         if(!c){ return; }
@@ -1328,7 +1340,7 @@
           addLine(certOnlyLeg[1], 1, 'Tracked courier, arranged by us', i === 0 ? rate(certOnlyLeg[0]) : 0, rate(c[0]), 'courier');
           return;
         }
-        addLine(c[1], 1, 'Tracked courier, arranged by us', handling, rate(c[0]), 'courier');
+        addLine(c[1], 1, leg === 'mfat' ? 'Sent through MFAT post, arranged by us' : 'Tracked courier, arranged by us', handling, rate(c[0]), 'courier');
       });
 
       if(priorityAdmin){ addLine(L('priorityAdmin'), 1, 'Speeds up our admin only', rate('priorityAdmin'), 0); }
